@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(BumbleBee)
+project(bumblebee)
 
 execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
 message( STATUS "Architecture: ${ARCHITECTURE}" )
