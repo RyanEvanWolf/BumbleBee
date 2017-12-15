@@ -28,26 +28,36 @@ set(CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/cmake;${CMAKE_PREFIX_PATH})
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED)
-find_package(MRPT REQUIRED)
-
+find_package(OpenCV REQUIRED)
+find_package(BasicSLAMStructures REQUIRED CONFIG)
 
 if(${ARCHITECTURE} STREQUAL "x86_64")
-	set(BUILD_ONLY_INTERFACES TRUE)
+  set(EXTERNAL_LIBS ${OpenCV_LIBS})
 else()
-	set(BUILD_ONLY_INTERFACES FALSE)
-	find_package(OpenCV REQUIRED)
 	set(OpenCV_LIBS opencv_tegra)
 	set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 endif()
-	
-find_package(BasicSLAMStructures REQUIRED CONFIG)
+
+
+set(EXTERNAL_LIBS
+  ${OpenCV_LIBS}
+  ${BasicSLAMStructures_LIBS}
+)
+set(EXTERNAL_INCLUDE_DIRS
+  ${OpenCV_INCLUDE_DIRS}
+  ${BasicSLAMStructures_INCLUDE_DIRS}
+  )
+  
+set(EXTERNAL_LIB_DIRS
+  ${BasicSLAMStructures_LIBRARIES_DIR}
+  )
+
 #include(${CMAKE_SOURCE_DIR}/cmake/StructuresConfig.cmake)
 
 
 
-include(${CMAKE_SOURCE_DIR}/cmake/RelativePoseEstimationConfig.cmake)
+#include(${CMAKE_SOURCE_DIR}/cmake/RelativePoseEstimationConfig.cmake)
 
-MESSAGE(STATUS "${STRUCTURES_LIBS}")
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -135,14 +145,10 @@ MESSAGE(STATUS "${STRUCTURES_LIBS}")
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS
+    ${EXTERNAL_INCLUDE_DIRS}
   LIBRARIES
-DataStructures
-boost_filesystem
-boost_system
-${MRPT_LIBS}
-${RelativePoseEstimation_LIBS}
-${OpenCV_LIBS}
+    ${EXTERNAL_LIBS}
 #  CATKIN_DEPENDS common_msgs roscpp rospy std_msgs tf tf2
 #  DEPENDS system_lib
 )
@@ -155,17 +161,12 @@ ${OpenCV_LIBS}
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include
   ${catkin_INCLUDE_DIRS}
-	${MRPT_INCLUDE_DIRS}
-	${RelativePoseEstimation_INCLUDE_DIRS}
-	${Structures_INCLUDE_DIRS}
-	${OpenCV_INCLUDE_DIRS}
+  ${EXTERNAL_INCLUDE_DIRS}
 )
 
 link_directories(
-	${RelativePoseEstimation_LIBRARIES_DIR}
-	${Structures_LIBRARIES_DIR}
+  ${EXTERNAL_LIB_DIRS}
 )
 
 ## Declare a C++ library
@@ -181,6 +182,7 @@ link_directories(
 
 MESSAGE(STATUS "Opencv includes  ${OpenCV_INCLUDE_DIRS}")
 MESSAGE(STATUS "cuda static - ${CUDA_USE_STATIC_CUDA_RUNTIME}")
+MESSAGE(STATUS "Structures Include DIRS - ${Structures_INCLUDE_DIRS}") 
 
 ##create Tests
 
@@ -194,10 +196,7 @@ foreach(file ${files})
 	add_executable(${tempName} ${file})
 	target_link_libraries(${tempName}
 		${catkin_LIBRARIES}
-		${OpenCV_LIBS}
-		${MRPT_LIBS}
-		${RelativePoseEstimation_LIBS}
-		${Structures_LIBS}
+    ${EXTERNAL_LIBS}
 	)
 endforeach()
 # add_executable(${PROJECT_NAME}_node src/experiments_node.cpp)
