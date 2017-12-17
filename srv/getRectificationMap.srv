@@ -1,0 +1,6 @@
+bool floatingPoint
+---
+sensor_msgs/Image leftx
+sensor_msgs/Image lefty
+sensor_msgs/Image rightx
+sensor_msgs/Image righty

@@ -10,11 +10,12 @@ message( STATUS "Architecture: ${ARCHITECTURE}" )
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  std_msgs
+	roscpp
+	rospy
+	std_msgs
 	cv_bridge
 	image_transport
+	message_generation
 )
 
 
@@ -31,11 +32,18 @@ find_package(Boost REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(BasicSLAMStructures REQUIRED CONFIG)
 
+
+
+
+MESSAGE(STATUS "Opencv includes  ${OpenCV_INCLUDE_DIRS}")
+MESSAGE(STATUS "Structures Include DIRS - ${Structures_INCLUDE_DIRS}") 
+
 if(${ARCHITECTURE} STREQUAL "x86_64")
   set(EXTERNAL_LIBS ${OpenCV_LIBS})
 else()
 	set(OpenCV_LIBS opencv_tegra)
 	set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+	MESSAGE(STATUS "cuda static - ${CUDA_USE_STATIC_CUDA_RUNTIME}")
 endif()
 
 
@@ -51,12 +59,6 @@ set(EXTERNAL_INCLUDE_DIRS
 set(EXTERNAL_LIB_DIRS
   ${BasicSLAMStructures_LIBRARIES_DIR}
   )
-
-#include(${CMAKE_SOURCE_DIR}/cmake/StructuresConfig.cmake)
-
-
-
-#include(${CMAKE_SOURCE_DIR}/cmake/RelativePoseEstimationConfig.cmake)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -96,11 +98,11 @@ set(EXTERNAL_LIB_DIRS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+   FILES
+	getRectificationMap.srv
+	getOffset.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -110,10 +112,11 @@ set(EXTERNAL_LIB_DIRS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   common_msgs#   std_msgs
-# )
+generate_messages(
+   DEPENDENCIES
+	std_msgs
+	sensor_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -146,6 +149,7 @@ set(EXTERNAL_LIB_DIRS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS
+    include
     ${EXTERNAL_INCLUDE_DIRS}
   LIBRARIES
     ${EXTERNAL_LIBS}
@@ -161,6 +165,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
   ${EXTERNAL_INCLUDE_DIRS}
 )
@@ -177,28 +182,28 @@ link_directories(
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
-MESSAGE(STATUS "Opencv includes  ${OpenCV_INCLUDE_DIRS}")
-MESSAGE(STATUS "cuda static - ${CUDA_USE_STATIC_CUDA_RUNTIME}")
-MESSAGE(STATUS "Structures Include DIRS - ${Structures_INCLUDE_DIRS}") 
 
 ##create Tests
 
+add_subdirectory(src)
 
-file(GLOB files "src/*.cpp")
+
+
+#file(GLOB files "src/*.cpp")
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-foreach(file ${files})
-	get_filename_component(tempName ${file} NAME_WE)
-	add_executable(${tempName} ${file})
-	target_link_libraries(${tempName}
-		${catkin_LIBRARIES}
-    ${EXTERNAL_LIBS}
-	)
-endforeach()
+#foreach(file ${files})
+#	get_filename_component(tempName ${file} NAME_WE)
+#	add_executable(${tempName} ${file})
+#	target_link_libraries(${tempName}
+#		${catkin_LIBRARIES}
+ #   ${EXTERNAL_LIBS}
+#	)
+#endforeach()
 # add_executable(${PROJECT_NAME}_node src/experiments_node.cpp)
 
 ## Rename C++ executable without prefix
