@@ -150,9 +150,6 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS
     include
-    ${EXTERNAL_INCLUDE_DIRS}
-  LIBRARIES
-    ${EXTERNAL_LIBS}
 #  CATKIN_DEPENDS common_msgs roscpp rospy std_msgs tf tf2
 #  DEPENDS system_lib
 )
