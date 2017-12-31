@@ -102,6 +102,7 @@ add_service_files(
    FILES
 	getRectificationMap.srv
 	getOffset.srv
+	getQ.srv
 )
 
 ## Generate actions in the 'action' folder

@@ -11,8 +11,39 @@ configurationManager::configurationManager(std::string stereoInputFile)
 	
 	getRectificationMapServ=n.advertiseService("bumblebee_configuration/getRectificationMap",&configurationManager::RectificationMap,this);
 	getOffsetServ=n.advertiseService("bumblebee_configuration/getOffset",&configurationManager::Offset,this);
+	getQServ=n.advertiseService("bumblebee_configuration/getQ",&configurationManager::Q,this);
+	infoLPub=n.advertise<sensor_msgs::CameraInfo>("bumblebee_configuration/left/info",20,true);
+	infoRPub=n.advertise<sensor_msgs::CameraInfo>("bumblebee_configuration/right/info",20,true);
+	//still to populate camera info properly TODO
+	sensor_msgs::CameraInfo configMessageL, configMessageR;
+	configMessageL.height=bumblebee.L_iMapx_.rows;
+	configMessageL.width=bumblebee.L_iMapx_.cols;
 	
 	
+	/*configMessageL.distortion_model="plumb_bob";
+	configMessageL.D[0]=0;
+	configMessageL.D[1]=0;
+	configMessageL.D[2]=0;
+	configMessageL.D[3]=0;
+	configMessageL.D[4]=0;*/
+
+	
+	
+	infoLPub.publish(configMessageL);
+	infoRPub.publish(configMessageR);
+}
+
+
+bool configurationManager::Q(bumblebee::getQ::Request& req, bumblebee::getQ::Response& res)
+{
+	for(int rows=0;rows<4;rows++)
+	{
+		for(int cols=0;cols<4;cols++)
+		{
+			res.Q[rows*4+cols]=bumblebee.Qmap_.at<double>(rows,cols);
+		}
+	}
+	return true;
 }
 
 
