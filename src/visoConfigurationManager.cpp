@@ -1,26 +1,42 @@
-#include <bumblebee/configurationManager.hpp>
+#include <bumblebee/visoConfigurationManager.hpp>
 
-configurationManager::configurationManager(std::string stereoInputFile)
+visoConfigurationManager::visoConfigurationManager(std::string stereoInputFile)
 {
-  std::cout<<"beginning Read\n";
-  
+  std::cout<<"Reading from "<<stereoInputFile<<std::endl;
 	cv::FileStorage in(stereoInputFile,cv::FileStorage::READ);
 	in["StereoRect"]>>bumblebee;
 	in.release();
 	ROS_INFO_STREAM("stereo File Loaded from :"<<stereoInputFile);
 	///setup services
-	
-	getRectificationMapServ=n.advertiseService("bumblebee_configuration/getRectificationMap",&configurationManager::RectificationMap,this);
-	getOffsetServ=n.advertiseService("bumblebee_configuration/getOffset",&configurationManager::Offset,this);
-	getQServ=n.advertiseService("bumblebee_configuration/getQ",&configurationManager::Q,this);
-	infoLPub=n.advertise<sensor_msgs::CameraInfo>("bumblebee_configuration/left/info",20,true);
-	infoRPub=n.advertise<sensor_msgs::CameraInfo>("bumblebee_configuration/right/info",20,true);
-	
-	//assuming the cameraInfo is ideal rectified data
-	//i.e. no rotation information really required, everything set to identity
-	sensor_msgs::CameraInfo configMessageL, configMessageR;
-	configMessageL.header.frame_id="RectifiedLeftFrame";
-	configMessageR.header.frame_id="RectifiedRightFrame";
+	ROS_INFO_STREAM(ros::this_node::getName()+"/getRectificationMap");
+	getRectificationMapServ=n.advertiseService(ros::this_node::getName()+"/getRectificationMap",&visoConfigurationManager::RectificationMap,this);
+	getOffsetServ=n.advertiseService(ros::this_node::getName()+"/getOffset",&visoConfigurationManager::Offset,this);
+	getQServ=n.advertiseService(ros::this_node::getName()+"/getQ",&visoConfigurationManager::Q,this);
+  getCameraInfoServ=n.advertiseService(ros::this_node::getName()+"/getCameraInfo",&visoConfigurationManager::CameraInfo,this);
+
+}
+
+
+
+bool visoConfigurationManager::Q(bumblebee::getQ::Request& req, bumblebee::getQ::Response& res)
+{
+	for(int rows=0;rows<4;rows++)
+	{
+		for(int cols=0;cols<4;cols++)
+		{
+			res.Q[rows*4+cols]=bumblebee.Qmap_.at<double>(rows,cols);
+		}
+	}
+	return true;
+}
+
+
+bool visoConfigurationManager::CameraInfo(bumblebee::getCameraInfo::Request &req,bumblebee::getCameraInfo::Response &res)
+{
+  
+  sensor_msgs::CameraInfo configMessageL, configMessageR;
+	configMessageL.header.frame_id="left";
+	configMessageR.header.frame_id="right";
 	
 	configMessageL.height=bumblebee.L_iMapx_.rows;
 	configMessageL.width=bumblebee.L_iMapx_.cols;
@@ -63,29 +79,15 @@ configurationManager::configurationManager(std::string stereoInputFile)
 	configMessageR.roi.y_offset=bumblebee.r_ROI_.y;
 	configMessageR.roi.height=bumblebee.r_ROI_.height;
 	configMessageR.roi.width=bumblebee.r_ROI_.width;
-	
-	infoLPub.publish(configMessageL);
-	infoRPub.publish(configMessageR);
   
-  //set baselink to the camera sensor frame
+  res.left=configMessageL;
+  res.right=configMessageR;
+  return true;
 }
 
 
 
-bool configurationManager::Q(bumblebee::getQ::Request& req, bumblebee::getQ::Response& res)
-{
-	for(int rows=0;rows<4;rows++)
-	{
-		for(int cols=0;cols<4;cols++)
-		{
-			res.Q[rows*4+cols]=bumblebee.Qmap_.at<double>(rows,cols);
-		}
-	}
-	return true;
-}
-
-
-bool configurationManager::RectificationMap(bumblebee::getRectificationMap::Request& req, bumblebee::getRectificationMap::Response& res)
+bool visoConfigurationManager::RectificationMap(bumblebee::getRectificationMap::Request& req, bumblebee::getRectificationMap::Response& res)
 {
 	if(req.floatingPoint)
 	{
@@ -107,7 +109,7 @@ bool configurationManager::RectificationMap(bumblebee::getRectificationMap::Requ
 
 
 
-bool configurationManager::Offset(bumblebee::getOffset::Request& req, bumblebee::getOffset::Response& res)
+bool visoConfigurationManager::Offset(bumblebee::getOffset::Request& req, bumblebee::getOffset::Response& res)
 {
 	res.left.x_offset=bumblebee.l_ROI_.x;
 	res.left.y_offset=bumblebee.l_ROI_.y;

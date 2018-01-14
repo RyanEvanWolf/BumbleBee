@@ -15,6 +15,10 @@ find_package(catkin REQUIRED COMPONENTS
 	std_msgs
 	cv_bridge
 	image_transport
+	tf2
+	tf2_ros
+	tf2_geometry_msgs
+	geometry_msgs
 	message_generation
 )
 
@@ -103,6 +107,7 @@ add_service_files(
 	getRectificationMap.srv
 	getOffset.srv
 	getQ.srv
+	getCameraInfo.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -117,6 +122,7 @@ generate_messages(
    DEPENDENCIES
 	std_msgs
 	sensor_msgs
+	geometry_msgs
 )
 
 ################################################

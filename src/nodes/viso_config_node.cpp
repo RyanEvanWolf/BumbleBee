@@ -10,16 +10,18 @@
 #include <sensor_msgs/RegionOfInterest.h>
 
 
-#include <bumblebee/configurationManager.hpp>
+#include <bumblebee/visoConfigurationManager.hpp>
 
-#define DEFAULT_RECTIFICATION_FILE "/home/ryan/git/Output/Calibration/edited/Rectified_five_parameter.xml"
+#define DEFAULT_RECTIFICATION_FILE "/home/ryan/git/Output/Calibration/stereo_ParameterFive.xml"
 
 int main(int argc,char *argv[])
 {
 	ros::init(argc,argv,"bumblebee_configuration");
-  std::cout<<"file input "<<argv[1]<<std::endl;
+  std::cout<<"Loading bumblebee_configuration from "<<argv[1]<<std::endl;
   std::string in(argv[1]);
-	configurationManager bumbleConfig(in);
+
+	visoConfigurationManager bumbleConfig(in);//DEFAULT_RECTIFICATION_FILE);
 	ros::spin();
-  	return 0;
+  return 0;
 }
+ 
