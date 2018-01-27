@@ -35,8 +35,8 @@ bool visoConfigurationManager::CameraInfo(bumblebee::getCameraInfo::Request &req
 {
   
   sensor_msgs::CameraInfo configMessageL, configMessageR;
-	configMessageL.header.frame_id="left";
-	configMessageR.header.frame_id="right";
+	configMessageL.header.frame_id="/bumblebee_node/left/image_rect";
+	configMessageR.header.frame_id="/bumblebee_node/right/image_rect";
 	
 	configMessageL.height=bumblebee.L_iMapx_.rows;
 	configMessageL.width=bumblebee.L_iMapx_.cols;

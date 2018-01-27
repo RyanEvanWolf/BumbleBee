@@ -75,36 +75,40 @@ ryMap=copy.deepcopy(cvb.imgmsg_to_cv2(reply.righty))
 info_reply=infoServ(getCameraInfoRequest())
 
 lInfo=copy.deepcopy(info_reply.left)
-lInfo.header.frame_id="/left"
 rInfo=copy.deepcopy(info_reply.right)
-rInfo.header.frame_id="/right"
 
 def pubTopic(message):
     fullImage = cvb.imgmsg_to_cv2(message)
     limages=[]
     rimages=[]
+    imageEncoding=[]
 
     limages.append(copy.deepcopy(fullImage[768:768*2,0:1024]))
     rimages.append(copy.deepcopy(fullImage[0:768, 0:1024]))
+    imageEncoding.append("mono8")
 
     limages.append(copy.deepcopy(cv2.cvtColor(limages[0],cv2.COLOR_BAYER_BG2GRAY)))
     rimages.append(copy.deepcopy(cv2.cvtColor(rimages[0],cv2.COLOR_BAYER_BG2GRAY)))
+    imageEncoding.append("mono8")
+
 
     limages.append(copy.deepcopy(cv2.cvtColor(limages[0],cv2.COLOR_BAYER_BG2RGB)))
     rimages.append(copy.deepcopy(cv2.cvtColor(rimages[0],cv2.COLOR_BAYER_BG2RGB)))
+    imageEncoding.append("rgb8")
 
     limages.append(copy.deepcopy(cv2.remap(limages[1],lxMap,lyMap,cv2.INTER_LINEAR)))
     rimages.append(copy.deepcopy(cv2.remap(rimages[1], rxMap, ryMap, cv2.INTER_LINEAR)))
+    imageEncoding.append("mono8")
 
     limages.append(copy.deepcopy(cv2.remap(limages[2],lxMap,lyMap,cv2.INTER_LINEAR)))
     rimages.append(copy.deepcopy(cv2.remap(rimages[2], rxMap, ryMap, cv2.INTER_LINEAR)))
+    imageEncoding.append("rgb8")
 
-    limages.append(copy.deepcopy(cv2.remap(limages[2],lxMap,lyMap,cv2.INTER_LINEAR)))
-    rimages.append(copy.deepcopy(cv2.remap(rimages[2], rxMap, ryMap, cv2.INTER_LINEAR)))
-
-    #limages.append(copy.deepcopy(limages[3][offreply.left.y_offset:offreply.left.height,offreply.left.x_offset:offreply.left.width]))
-    #rimages.append(copy.deepcopy(rimages[3][offreply.right.y_offset:offreply.right.height, offreply.right.x_offset:offreply.right.width]))
-    print("here")
+    print(offreply)
+    print(limages[3][offreply.left.y_offset:offreply.left.height,offreply.left.x_offset:offreply.left.width].shape)
+    limages.append(copy.deepcopy(limages[3][offreply.left.y_offset:offreply.left.height,offreply.left.x_offset:offreply.left.width]))
+    rimages.append(copy.deepcopy(rimages[3][offreply.right.y_offset:offreply.right.height, offreply.right.x_offset:offreply.right.width]))
+    imageEncoding.append("mono8")
     #cv2.cvtColor(cv2.imread(i, cv2.IMREAD_GRAYSCALE), cv2.COLOR_BAYER_BG2RGB))11
 
 
@@ -133,22 +137,18 @@ def pubTopic(message):
     leftinfoPub.publish(lInfo)
     rightinfoPub.publish(rInfo)
 
-
+    ##
     for index in range(0,len(limages)):
         lImageMessage=cvb.cv2_to_imgmsg(limages[index])
         lImageMessage.header.stamp=pubTime
         lImageMessage.header.frame_id="/left"
-        lImageMessage.encoding="mono8"
+        lImageMessage.encoding=imageEncoding[index]
         rImageMessage=cvb.cv2_to_imgmsg(rimages[index])
         rImageMessage.header.stamp=pubTime
         rImageMessage.header.frame_id="/right"
-        rImageMessage.encoding = "mono8"
+        rImageMessage.encoding = imageEncoding[index]
         leftPublishers[index].publish(lImageMessage)
         rightPublishers[index].publish(rImageMessage)
-        print(index)
-        cv2.imshow(str(index),limages[index])
-        cv2.waitKey(1)
-    cv2.destroyAllWindows()
 
 
 

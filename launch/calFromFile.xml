@@ -1,0 +1,11 @@
+<launch>
+   <arg name="inDir"/>
+    <arg name="outFolder" default="Calibration"/>
+   <arg name="outDir" default="/home/ryan/git/Output/Calibration"/>
+   <arg name="checkerBoardHeight" default="10"/>
+   <arg name="checkerBoardWidth" default="12"/>
+   <arg name="squareLength" default="0.037"/>
+   <arg name="distortModel" default="5Parameter"/>
+   <arg name="debayer" default="False"/>
+   <node name="Calibration" type="calibrate.py" pkg="bumblebee" args="$(arg inDir) $(arg outDir)/$(arg outFolder) $(arg squareLength) $(arg checkerBoardWidth) $(arg checkerBoardHeight) $(arg distortModel) $(arg debayer)" output="screen"/>
+</launch>

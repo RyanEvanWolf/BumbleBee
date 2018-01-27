@@ -20,6 +20,9 @@ int main(int argc,char *argv[])
 	ros::NodeHandle n;
 
   std::string stereoInputFile(argv[1]);
+  std::string baseName(argv[2]);
+  std::string leftCameraName(argv[3]);
+  std::string rightCameraName(argv[4]);
 
   stereo::StereoRect bumblebee;
   cv::FileStorage in(stereoInputFile,cv::FileStorage::READ);
