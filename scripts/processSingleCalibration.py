@@ -5,6 +5,7 @@ import os
 import numpy as np
 import cv2
 
+import matplotlib.pyplot as plt
 from bumblebee_calibration import *
 
 import pickle
@@ -137,7 +138,6 @@ if(outputData.meta.distortionModel=="4Parameter"):
     print("4Parameter Distortion Model Detected")
     singleCameraCalibrationFlags=cv2.CALIB_FIX_K3
     outputData.Lparam.calibrationFlags = cv2.CALIB_FIX_K3
-    outputData.Rparam.calibrationFlags = cv2.CALIB_FIX_K3
     Dl = np.array((1, 4), np.float64)
     Dr = np.array((1, 4), np.float64)
 else:
@@ -147,7 +147,7 @@ else:
     Dr = np.array((1, 5), np.float64)
     singleCameraCalibrationFlags=0
     outputData.Lparam.calibrationFlags=0
-    outputData.Rparam.calibrationFlags=0
+
 
 print("left Camera")
 
@@ -155,100 +155,39 @@ Kl=np.zeros((3,3), np.float64)
 R=None
 T=None
 
-outputData.Lparam.RMS_error,outputData.Lparam.K,outputData.Lparam.D,outputData.LR,outputData.LT= cv2.calibrateCamera(np.array(outputData.PatternPoints),np.array(outputData.LeftPoints),
+outputData.Lparam.RMS_error,outputData.Lparam.Kcam,outputData.Lparam.D,outputData.LR,outputData.LT= cv2.calibrateCamera(np.array(outputData.PatternPoints),np.array(outputData.LeftPoints),
                                                                                                                         leftImage.shape[::-1],Kl,Dl,R,T,flags=singleCameraCalibrationFlags,criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 600, 0.05))
-print("LeftRMS ERROR := ",outputData.Lparam.RMS_error)
+print("LeftRMS ERROR := ",outputData.param.RMS_error)
+
 
 totalMeasurements=0
 totalError=0
 otherError=0
 euclidianDistance=[]
-for imgIdx in range(len(outputData.LR)):
+for imgIdx in range(len(outputData.R)):
     print("imgNumber",imgIdx)
     count=0
-    imgReprojected=[]
     for PtsIdx in np.array(objp):
-        reprojected,jacob=cv2.projectPoints(PtsIdx.reshape((1,3)),
+        outputData.LeftReprojected,jacob=cv2.projectPoints(PtsIdx.reshape((1,3)),
                           np.array(outputData.LR[imgIdx]).reshape(1, 3),
                           np.array(outputData.LT[imgIdx]).reshape(1, 3),
                           outputData.Lparam.K,outputData.Lparam.D)
-        imgReprojected.append(reprojected)
         #totalError+=np.square(reprojected-LeftCorners[imgIdx][count]).sum()
         #otherError+=np.linalg.norm(reprojected-LeftCorners[imgIdx][count])**2
         #avgEuclidian.append(np.linalg.norm(reprojected-LeftCorners[imgIdx][count]))
         count=count+1
         totalMeasurements+=1
-    outputData.LeftReprojected.append(imgReprojected)
-
-print("Right Camera")
-Kr = np.zeros((3, 3), np.float64)
-R = None
-T = None
-outputData.Rparam.RMS_error, outputData.Rparam.K, outputData.Rparam.D, outputData.RR, outputData.RT = cv2.calibrateCamera(
-        np.array(outputData.PatternPoints), np.array(outputData.RightPoints),
-        rightImage.shape[::-1], Kr, Dr, R, T, flags=singleCameraCalibrationFlags,
-        criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 600, 0.05))
-print("RightRMS ERROR := ", outputData.Rparam.RMS_error)
-
-totalMeasurements = 0
-totalError = 0
-otherError = 0
-euclidianDistance = []
-for imgIdx in range(len(outputData.RR)):
-    print("imgNumber", imgIdx)
-    count = 0
-    imgReprojected = []
-    for PtsIdx in np.array(objp):
-        reprojected, jacob = cv2.projectPoints(PtsIdx.reshape((1, 3)),
-                                                              np.array(outputData.RR[imgIdx]).reshape(1, 3),
-                                                              np.array(outputData.RT[imgIdx]).reshape(1, 3),
-                                                              outputData.Rparam.K, outputData.Rparam.D)
-        imgReprojected.append(reprojected)
-        count = count + 1
-        totalMeasurements += 1
-    outputData.RightReprojected.append(imgReprojected)
-
-
-
-# outputData.Rparam.RMS_error,outputData.Rparam.Kcam,outputData.Rparam.D,outputData.RR,outputData.RT= cv2.calibrateCamera(np.array(outputData.PatternPoints),np.array(outputData.rightPoints),
-#                                                                                                                         rightImage.shape[::-1],Kl,Dl,R,T,flags=singleCameraCalibrationFlags,criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 600, 0.05))
-# print("RightRMS ERROR := ",outputData.Rparam.RMS_error)
-#
-#
-# totalMeasurements=0
-# totalError=0
-# otherError=0
-# euclidianDistance=[]
-# for imgIdx in range(len(outputData.RR)):
-#     print("imgNumber",imgIdx)
-#     count=0
-#     for PtsIdx in np.array(objp):
-#         outputData.RightReprojected,jacob=cv2.projectPoints(PtsIdx.reshape((1,3)),
-#                           np.array(outputData.RR[imgIdx]).reshape(1, 3),
-#                           np.array(outputData.RT[imgIdx]).reshape(1, 3),
-#                           outputData.Rparam.K,outputData.Rparam.D)
-#         #totalError+=np.square(reprojected-LeftCorners[imgIdx][count]).sum()
-#         #otherError+=np.linalg.norm(reprojected-LeftCorners[imgIdx][count])**2
-#         #avgEuclidian.append(np.linalg.norm(reprojected-LeftCorners[imgIdx][count]))
-#         count=count+1
-#         totalMeasurements+=1
-
-
-
-outputFolder=outputData.meta.outDirectory +"/singleCalibrationData.p"
-print("Saving to File "+outputFolder)
-pickle.dump(outputData,open(outputFolder,"wb"))
-
 # print("calculated",np.sqrt(totalError/totalMeasurements))
 # print("calculated2",np.sqrt(otherError/totalMeasurements))
 # print(totalMeasurements)
 # print(objp.shape)
 #
 #
-print("COMPLETED")
+# print("COMPLETED")
 #
 # plt.hist(range(euclidianDistance),euclidianDistance)
 # plt.savefig("/home/ryan/leftHist.png",dpi=300)
 #
 # tempFiles = []
 # count=0
+
