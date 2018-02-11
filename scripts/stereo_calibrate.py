@@ -5,53 +5,41 @@ import os
 import numpy as np
 import cv2
 
+import scipy.stats.mstats as stat
+
 import matplotlib.pyplot as plt
 from bumblebee_calibration import *
 
+
+mappingName="_Map.p"
+calibrationName="StereoCalibration.p"
+singleName="inputStereoCalibration.p"
+extrinName="extrinsicCalibration.p"
+intrinName="intrinsicCalibration.p"
+
+
 import pickle
 
+
 inputData=sys.argv[1]
-errorThreshold=1.0
+outputDirectory=sys.argv[2]
 
-print("Loading calibration data from "+inputData)
-calibrationData=pickle.load(open(inputData, "rb" ))
-print("file opened")
+outputData=StereoCameraInfo()
 
-print(calibrationData.getRMSreprojection())
 
-leftImagesAvgRms=[]
-rightImagesAvgRms=[]
 
-for i in range(len(calibrationData.LeftPoints)):
-    leftImagesAvgRms.append(calibrationData.getSingleImageRMS(i)[0])
-    rightImagesAvgRms.append(calibrationData.getSingleImageRMS(i)[1])
+outputData.calibrateFromFile(inputData)
+print("saving to output Folder "+outputDirectory)
 
-leftFilter=[]
-rightFilter=[]
+if(not os.path.isdir(outputDirectory)):
+        os.makedirs(outputDirectory)
 
-filterl=[]
-filterr=[]
 
-for i in range(len(calibrationData.LeftPoints)):
-    if((calibrationData.getSingleImageRMS(i)[0]<errorThreshold)and(calibrationData.getSingleImageRMS(i)[1]<errorThreshold)):
-        leftFilter.append([i,calibrationData.getSingleImageRMS(i)[0]])
-        filterl.append(calibrationData.getSingleImageRMS(i)[0])
-        rightFilter.append([i,calibrationData.getSingleImageRMS(i)[1]])
-        filterr.append(calibrationData.getSingleImageRMS(i)[1])
+pickle.dump(outputData,open(outputDirectory+"/"+calibrationName,"wb"))
+pickle.dump(outputData.extrin,open(outputDirectory+"/"+extrinName,"wb"))
+pickle.dump(outputData.intrin,open(outputDirectory+"/"+intrinName,"wb"))
+pickle.dump(outputData.inCalibrationData,open(outputDirectory+"/"+singleName,"wb"))
+pickle.dump(outputData.lRect,open(outputDirectory+"/left"+mappingName,"wb"))
+pickle.dump(outputData.rRect,open(outputDirectory+"/right"+mappingName,"wb"))
+print("COMPLETED")
 
-f1 = plt.figure()
-f2 = plt.figure()
-ax1 = f1.add_subplot(121)
-ax1.hist(leftImagesAvgRms,30)
-ax1.set_title("Left Images RMS")
-ax2 = f1.add_subplot(122)
-ax2.hist(rightImagesAvgRms,30)
-ax2.set_title("Right Images RMS")
-
-ax3 = f2.add_subplot(121)
-ax3.hist(filterl,20)
-ax3.set_title("Filtered Left Images RMS")
-ax4 = f2.add_subplot(122)
-ax4.hist(filterr,20)
-ax4.set_title("Filtered Right Images RMS")
-plt.show()

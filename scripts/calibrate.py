@@ -118,6 +118,7 @@ for imgDir in inImageFiles:
         outputData.LeftPoints.append(lCorners)
         outputData.RightPoints.append(rCorners)
         outputData.PatternPoints.append(objp)
+        outputData.imgName.append(imgDir)
         cv2.imshow("Found",drawnLeft)
         cv2.waitKey(500)
     else:
