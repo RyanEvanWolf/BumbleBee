@@ -98,7 +98,7 @@ for fileName in calibrationData.inCalibrationData.imgName:
         print("NO CHECKER")
     outshow=copy.deepcopy(leftRectified[-1])
     cv2.imshow("outWindow",Combined)
-    cv2.waitKey(30)
+    cv2.waitKey(1)
 
 totalPoints=(totalImagesFound*
              calibrationData.inCalibrationData.meta.getBoardSize()[0]*
@@ -108,13 +108,10 @@ epiPolarError= np.sqrt(epiPolarError/totalPoints)
 print(epiPolarError)
 
 f1 = plt.figure()
-ax1 = f1.add_subplot(111)
+ax1 = f1.add_subplot(122)
 ax1.hist(epiError,25)
 ax1.set_xlabel("Average Epipolar Error")
 ax1.set_ylabel("Total Images")
-
-print("Baseline")
-print(extrin.getBaseline())
 
 print(intrin.lROI)
 print(intrin.rROI)
@@ -147,7 +144,28 @@ cv2.imshow("coverage",Coverage)
 cv2.imwrite(calibrationDirectory+"/Coverage.png",Coverage)
 cv2.waitKey(1000)
 
+leftImagesAvgRms=[]
+rightImagesAvgRms=[]
+combined=[]
+
+for i in range(len(calibrationData.inCalibrationData.LeftPoints)):
+    leftImagesAvgRms.append(calibrationData.inCalibrationData.getSingleImageRMS(i)[0])
+    rightImagesAvgRms.append(calibrationData.inCalibrationData.getSingleImageRMS(i)[1])
+    combined.append((calibrationData.inCalibrationData.getSingleImageRMS(i)[0]+calibrationData.inCalibrationData.getSingleImageRMS(i)[1])/2.0)
+
+ax2 = f1.add_subplot(121)
+ax2.hist(combined,15)
+ax2.set_xlabel("Average Input RMS Error")
+ax2.set_ylabel("Total Images")
+
+
+
+
 plt.savefig(calibrationDirectory+"/EpiErrorFigure.png",format='png',dpi=1200)
+
+
+intrin.p()
+extrin.p()
 plt.show()
 
 

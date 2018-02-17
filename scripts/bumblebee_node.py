@@ -9,6 +9,8 @@ from bumblebee.srv import getCameraInfo,getCameraInfoRequest,getCameraInfoRespon
 #message types
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Image,CameraInfo
+from geometry_msgs.msg import
+
 import copy
 
 import time
@@ -76,6 +78,12 @@ info_reply=infoServ(getCameraInfoRequest())
 
 lInfo=copy.deepcopy(info_reply.left)
 rInfo=copy.deepcopy(info_reply.right)
+
+worldFrame="world"
+leftCameraFrame="left"
+rightCameraFrame="right"
+rightRectifiedFrame="rectified_right"
+leftRectifiedFrame="rectified_left"
 
 def pubTopic(message):
     fullImage = cvb.imgmsg_to_cv2(message)

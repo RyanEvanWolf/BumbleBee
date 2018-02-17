@@ -17,6 +17,8 @@ import pickle
 
 
 
+
+
 class RectificationInfo():
     def __init__(self):
         self.intXMapping=None
@@ -108,6 +110,10 @@ class SingleCameraParamData():
         self.D=None
         self.RMS_error=0
         self.calibrationFlags=0
+    def p(self):
+        print("K",self.K)
+        print("D",self.D)
+        print("RMS",self.RMS_error)
 
 class StereoCameraCalData():
     def __init__(self):
@@ -223,55 +229,6 @@ class StereoCameraInfo():
             LeftProjections.append(imgReprojected)
         return [LeftProjections,RightProjections]
 
-            ##return list of epipolar errors
-    # def getRectifiedImage(self,inImageIndex,bool FloatMap=True):
-    #     if
-    #     LeftImage=cv2.remap()
-    #     limages.append(copy.deepcopy(cv2.remap(limages[1], lxMap, lyMap, cv2.INTER_LINEAR)))
-
-    # def getCameraRMSerror(self):
-    #     ##estimate all the checkerboard pattern rotations
-    #     lTvec=[]
-    #     lRvec=[]
-    #     rTvec=[]
-    #     rRvec=[]
-    #     for imgIndex in range(len(self.inCalibrationData.PatternPoints)):
-    #         r, t, inliers = cv2.solvePnP(np.array(self.inCalibrationData.PatternPoints[imgIndex]),
-    #                                                np.array(self.inCalibrationData.LeftPoints[imgIndex]),
-    #                                                np.array(self.intrin.optimizedLeft.K),
-    #                                                np.array(self.intrin.optimizedLeft.D))
-    #         lRvec.append(r)
-    #         lTvec.append(t)
-    #
-    #
-    #         r, t, inliers = cv2.solvePnP(np.array(self.inCalibrationData.PatternPoints[imgIndex]),
-    #                                                np.array(self.inCalibrationData.RightPoints[imgIndex]),
-    #                                                np.array(self.intrin.optimizedLeft.K),
-    #                                                np.array(self.intrin.optimizedLeft.D))
-    #         rRvec.append(r)
-    #         rTvec.append(t)
-    #
-    #     ##estimate the reprojections
-    #     for imgIndex in range(len(self.inCalibrationData.PatternPoints)):
-    #         imgReprojected = []
-    #         for PtsIdx in np.array(self.inCalibrationData.PatternPoints[imgIndex]):
-    #             reprojected, jacob = cv2.projectPoints(PtsIdx.reshape((1, 3)),
-    #                                                    np.array(outputData.LR[imgIdx]).reshape(1, 3),
-    #                                                    np.array(outputData.LT[imgIdx]).reshape(1, 3),
-    #                                                    outputData.Lparam.K, outputData.Lparam.D)
-    #             imgReprojected.append(reprojected)
-    #             # totalError+=np.square(reprojected-LeftCorners[imgIdx][count]).sum()
-    #             # otherError+=np.linalg.norm(reprojected-LeftCorners[imgIdx][count])**2
-    #             # avgEuclidian.append(np.linalg.norm(reprojected-LeftCorners[imgIdx][count]))
-    #             count = count + 1
-    #             totalMeasurements += 1
-    #         outputData.LeftReprojected.append(imgReprojected)
-    #
-    #     reprojected,jacob=cv2.projectPoints(PtsIdx.reshape((1,3)),
-    #                       np.array(outputData.LR[imgIdx]).reshape(1, 3),
-    #                       np.array(outputData.LT[imgIdx]).reshape(1, 3),
-    #                       outputData.Lparam.K,outputData.Lparam.D)
-    #     imgReprojected.append(reprojected)
 
 
 class StereoExtrinsicInfo():
@@ -287,9 +244,48 @@ class StereoExtrinsicInfo():
         rMatrix=np.zeros(shape=(3,3))
         cv2.Rodrigues(self.R,rMatrix)
         return [self.T,rMatrix]
+    def getTransformChain(self):
+        leftFrame=np.identity(4,np.float64)
+        rightFrame=np.zeros((4,4),np.float64)
+
+        rightFrame[0:3,0:3]=self.R
+        rightFrame[0,3]=self.T[0,0]
+        rightFrame[1,3]=self.T[1,0]
+        rightFrame[2,3]=self.T[2,0]
+        rightFrame[3,3]=1
+
+
+        leftRectifiedFrame=np.zeros((4,4),np.float64)
+        leftRectifiedFrame[0:3,0:3]=self.Rleft
+        leftRectifiedFrame[3,3]=1
+
+        rightRectifiedFrame=np.zeros((4,4),np.float64)
+        rightRectifiedFrame[0:3,0:3]=self.Rright
+        rightRectifiedFrame[3,3]=1
+
+        return [leftFrame,rightFrame,leftRectifiedFrame,rightRectifiedFrame]
     def getIdealBaseline(self):
-        rMatrix,jac=cv2.Rodrigues(self.R)
-        return [self.T,rMatrix]
+        #L---->lR
+        #\
+        #\R----->rR
+        transform=self.getTransformChain()
+        combinedTransform=np.dot(np.linalg.inv(transform[2]),transform[0])
+        combinedTransform=np.dot(combinedTransform,transform[1])
+        combinedTransform=np.dot(combinedTransform,transform[3])
+        return combinedTransform
+    def p(self):
+        print("Extrinsic---")
+        print("E",self.E)
+        print("F",self.F)
+        print("R",self.R)
+        print("T",self.T)
+        print("Rleft",self.Rleft)
+        print("Rright",self.Rright)
+        print("Ideal")
+        print(self.getIdealBaseline())
+        print("Baseline")
+        print(self.getBaseline())
+
 
 class StereoIntrinsicInfo():
     def __init__(self):
@@ -300,3 +296,14 @@ class StereoIntrinsicInfo():
         self.Pr=np.zeros((3,4),np.float64)
         self.rROI = ((0, 0), (0, 0))
         self.Q=np.zeros((4,4),np.float64)
+    def p(self):
+        print("StereoIntrinsicInfo")
+        print("left-----")
+        print("Pl",self.Pl)
+        print("lROI",self.lROI)
+        self.optimizedLeft.p()
+        print("right----")
+        print("Pr",self.Pr)
+        print("rROI",self.rROI)
+        self.optimizedRight.p()
+        print("Q",self.Q)
