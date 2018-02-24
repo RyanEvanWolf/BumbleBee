@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 import rospy
-import sys
-import os
-import numpy as np
-import cv2
-
-import scipy.stats.mstats as stat
-
-import matplotlib.pyplot as plt
 from bumblebee_calibration import *
 
 import pickle
-import copy
+
 from geometry_msgs.msg import TransformStamped,Transform,Quaternion,Vector3
+from sensor_msgs.msg import CameraInfo,RegionOfInterest,Image
 import tf.transformations
+########Bumblebee
+
+from cv_bridge import CvBridge
+
+
+
+
 
 def msgFromTransform(inMatrix):
     outTransform=Transform()
@@ -34,6 +34,7 @@ if __name__ == "__main__":
     if(len(sys.argv)>2):
         nodeName=sys.argv[2]
     rospy.init_node(nodeName)
+    cvb = CvBridge()
     print("Load from "+calibrationDirectory)
     lMap = pickle.load(open(calibrationDirectory + "/left_Map.p", "rb"))
     print("Left Mapping Loaded")
@@ -43,6 +44,7 @@ if __name__ == "__main__":
     print("Camera Extrinsics Loaded")
     intrin = pickle.load(open(calibrationDirectory + "/intrinsicCalibration.p", "rb"))
     print("Camera Intrinsics Loaded")
+    stereoCalibration=pickle.load(open(calibrationDirectory + "/StereoCalibration.p", "rb"))
     #############################
     ###create transforms
     transformNames=["world","left","right","left_rectified","right_rectified"]
@@ -72,9 +74,72 @@ if __name__ == "__main__":
     ###OpenCV outputs must then be specified in terms of coordinate transformations?
     ####create the publishers
     pub=tf.TransformBroadcaster()
+    ####Create Camera Info
+    ##make ideal camera in rectified coordinate frame
+    idealLeftCamera=CameraInfo()
+    idealLeftCamera.height=stereoCalibration.inCalibrationData.meta.imgSize[0]
+    idealLeftCamera.width=stereoCalibration.inCalibrationData.meta.imgSize[1]
+    idealLeftCamera.distortion_model="plumb_bob" #TODO load based on distortion Model
+    idealLeftCamera.D=[0,0,0,0,0]
+    idealLeftCamera.K=intrin.Pl[0:3,0:3].flatten()
+    idealLeftCamera.R=np.identity(3,np.float64).flatten()
+    idealLeftCamera.P=intrin.Pl.flatten()
+    idealLeftCamera.header.frame_id=transformNames[3]
+
+    idealLeftCamera.roi.x_offset=intrin.lROI[1]
+    idealLeftCamera.roi.y_offset=intrin.lROI[0]
+    idealLeftCamera.roi.height=intrin.lROI[2]
+    idealLeftCamera.roi.width=intrin.lROI[3]
 
 
+    idealRightCamera=CameraInfo()
+    idealRightCamera.height=stereoCalibration.inCalibrationData.meta.imgSize[0]
+    idealRightCamera.width=stereoCalibration.inCalibrationData.meta.imgSize[1]
+    idealRightCamera.distortion_model="plumb_bob"
+    idealRightCamera.D=[0,0,0,0,0]
 
+    idealRightCamera.K=intrin.Pr[0:3,0:3].flatten()
+    idealRightCamera.R=np.identity(3,np.float64).flatten()
+    idealRightCamera.P=intrin.Pr.flatten()
+    idealRightCamera.header.frame_id=transformNames[4]
+
+    idealRightCamera.roi.x_offset=intrin.rROI[1]
+    idealRightCamera.roi.y_offset=intrin.rROI[0]
+    idealRightCamera.roi.height=intrin.rROI[2]
+    idealRightCamera.roi.width=intrin.rROI[3]
+
+
+    cameraPublisherLeft=rospy.Publisher(rospy.get_name()+"/idealLeft/CameraInfo",CameraInfo,queue_size=10,latch=True)
+    cameraPublisherRight = rospy.Publisher(rospy.get_name() + "/idealRight/CameraInfo", CameraInfo, queue_size=10,
+                                      latch=True)
+    cameraPublisherLeft.publish(idealLeftCamera)
+    cameraPublisherRight.publish(idealRightCamera)
+    print("published intrinsic Info")
+    ########publish Rectification Maps
+
+    lmapixPub=rospy.Publisher(rospy.get_name()+"/idealLeft/intX",Image,queue_size=3,latch=True)
+    lmapiyPub = rospy.Publisher(rospy.get_name() + "/idealLeft/intY", Image, queue_size=3, latch=True)
+    lmapfxPub = rospy.Publisher(rospy.get_name() + "/idealLeft/floatX", Image, queue_size=3, latch=True)
+    lmapfyPub = rospy.Publisher(rospy.get_name() + "/idealLeft/floatY", Image, queue_size=3, latch=True)
+
+    rmapixPub=rospy.Publisher(rospy.get_name()+"/idealRight/intX",Image,queue_size=3,latch=True)
+    rmapiyPub = rospy.Publisher(rospy.get_name() + "/idealRight/intY", Image, queue_size=3, latch=True)
+    rmapfxPub = rospy.Publisher(rospy.get_name() + "/idealRight/floatX", Image, queue_size=3, latch=True)
+    rmapfyPub = rospy.Publisher(rospy.get_name() + "/idealRight/floatY", Image, queue_size=3, latch=True)
+
+
+    lmapixPub.publish(cvb.cv2_to_imgmsg(lMap.intXMapping))
+    lmapiyPub.publish(cvb.cv2_to_imgmsg(lMap.intYMapping))
+    lmapfxPub.publish(cvb.cv2_to_imgmsg(lMap.floatXMapping))
+    lmapfyPub.publish(cvb.cv2_to_imgmsg(lMap.floatYMapping))
+
+    rmapixPub.publish(cvb.cv2_to_imgmsg(rMap.intXMapping))
+    rmapiyPub.publish(cvb.cv2_to_imgmsg(rMap.intYMapping))
+    rmapfxPub.publish(cvb.cv2_to_imgmsg(rMap.floatXMapping))
+    rmapfyPub.publish(cvb.cv2_to_imgmsg(rMap.floatYMapping))
+    print("published rectification Info")
+    QPub=rospy.Publisher(rospy.get_name()+"/Q",Image,queue_size=3,latch=True)
+    QPub.publish(cvb.cv2_to_imgmsg(intrin.Q))
     print("bumblebee Configuration Server Running")
     rate=rospy.Rate(15)
     while(not rospy.is_shutdown()):
