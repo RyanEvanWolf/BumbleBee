@@ -31,8 +31,10 @@ def msgFromTransform(inMatrix):
 if __name__ == "__main__":
     calibrationDirectory = sys.argv[1]
     nodeName="bumblebee_configuration"
+    publishData=False
     if(len(sys.argv)>2):
         nodeName=sys.argv[2]
+        publishData=(sys.argv[3]=="True")
     rospy.init_node(nodeName)
     cvb = CvBridge()
     print("Load from "+calibrationDirectory)
@@ -141,11 +143,13 @@ if __name__ == "__main__":
     QPub=rospy.Publisher(rospy.get_name()+"/Q",Image,queue_size=3,latch=True)
     QPub.publish(cvb.cv2_to_imgmsg(intrin.Q))
     print("bumblebee Configuration Server Running")
-    rate=rospy.Rate(15)
-    while(not rospy.is_shutdown()):
-        time=rospy.Time.now()
-        for i in chainTransforms:
-            i.header.stamp=time
-            pub.sendTransformMessage(i)
-        rate.sleep()
-
+    if(publishData):
+        rate=rospy.Rate(15)
+        while(not rospy.is_shutdown()):
+            time=rospy.Time.now()
+            for i in chainTransforms:
+                i.header.stamp=time
+                pub.sendTransformMessage(i)
+            rate.sleep()
+    else:
+        rospy.spin()

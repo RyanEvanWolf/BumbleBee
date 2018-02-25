@@ -95,6 +95,8 @@ class bumblebeeCamera():
                          message.roi.y_offset,
                          message.roi.height,
                          message.roi.width])
+        if((self.ROI[0]!=None) and (self.ROI[1]!=None)):
+            pass
     def subMapping(self,message,args):
         print("updating Mapping ["+str(args[0])+"]["+str(args[1])+"]")
         self.Mapping[args[0]][args[1]]=copy.deepcopy(self.cvb.imgmsg_to_cv2(message))
@@ -137,6 +139,11 @@ class bumblebeeCamera():
         rimages.append(copy.deepcopy(rimages[3][self.ROI[1][1]:self.ROI[1][2],self.ROI[1][0]:self.ROI[1][3]]))#offreply.right.y_offset:offreply.right.height, offreply.right.x_offset:offreply.right.width]))
         imageEncoding.append("mono8")
         pubTime = rospy.get_rostime()
+
+        self.Info[0].header.stamp = pubTime
+        self.Info[1].header.stamp=pubTime
+        leftinfoPub.publish(lInfo)
+        rightinfoPub.publish(rInfo)
         for index in range(0,len(limages)):
             lImageMessage=self.cvb.cv2_to_imgmsg(limages[index])
             lImageMessage.header.stamp=pubTime
