@@ -16,8 +16,34 @@ import matplotlib.pyplot as plt
 import pickle
 
 
+def drawROI(leftROI,rightROI,overlapROI,imgSize=(1024,768)):
+    cameraImage=np.zeros((imgSize[1],imgSize[0],3), np.int8)
+    overlapImage=np.zeros((imgSize[1],imgSize[0],3), np.int8)
+
+    cv2.rectangle(cameraImage, (leftROI[1],leftROI[0]),
+                   (leftROI[1]+leftROI[3],leftROI[0]+leftROI[2]),(0,0,255),10)
+    cv2.rectangle(cameraImage, (rightROI[1],rightROI[0]),
+                   (rightROI[1]+rightROI[3],rightROI[0]+rightROI[2]),(255,0,0),10)
+    cv2.rectangle(overlapImage, (overlapROI[1],overlapROI[0]),
+                   (overlapROI[1]+overlapROI[3],overlapROI[0]+overlapROI[2]),(0,255,0),-1)
+    overallImage=cv2.addWeighted(cameraImage, 0.7, overlapImage, 0.2, 0)
 
 
+    cv2.imwrite("/home/ryan/CALIMAGE.ppm",overallImage)
+    return overallImage
+
+def getROIoverlap(leftROI,rightROI):
+    ###y,x,height,width
+    print(leftROI,rightROI)
+    x=max(leftROI[0],rightROI[0])
+    y=max(leftROI[1],rightROI[1])
+    w=min(leftROI[0]+leftROI[2],rightROI[0]+rightROI[2])-x
+    h=min(leftROI[1]+leftROI[3],rightROI[1]+rightROI[3])-y
+    #x = min(a[0], b[0])
+    #y = min(a[1], b[1])
+    #w = max(a[0] + a[2], b[0] + b[2]) - x
+    #h = max(a[1] + a[3], b[1] + b[3]) - y
+    return (x, y, w, h)
 
 class RectificationInfo():
     def __init__(self):

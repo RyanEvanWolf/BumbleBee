@@ -12,7 +12,7 @@ import tf.transformations
 from cv_bridge import CvBridge
 
 
-
+import copy
 
 
 def msgFromTransform(inMatrix):
@@ -88,10 +88,18 @@ if __name__ == "__main__":
     idealLeftCamera.P=intrin.Pl.flatten()
     idealLeftCamera.header.frame_id=transformNames[3]
 
-    idealLeftCamera.roi.x_offset=intrin.lROI[1]
-    idealLeftCamera.roi.y_offset=intrin.lROI[0]
-    idealLeftCamera.roi.height=intrin.lROI[2]
-    idealLeftCamera.roi.width=intrin.lROI[3]
+    #im[y:y + h, x:x + w]
+    overlapROI=getROIoverlap(intrin.lROI,intrin.rROI)
+    ROIimage=copy.deepcopy(drawROI(intrin.lROI,intrin.rROI,overlapROI))
+
+
+    pubROIimage=rospy.Publisher(rospy.get_name()+"/roiImage",Image,queue_size=3,latch=True)
+    pubROIimage.publish(cvb.cv2_to_imgmsg(ROIimage))
+
+    idealLeftCamera.roi.x_offset=overlapROI[1]
+    idealLeftCamera.roi.y_offset=overlapROI[0]
+    idealLeftCamera.roi.height=overlapROI[2]
+    idealLeftCamera.roi.width=overlapROI[3]
 
 
     idealRightCamera=CameraInfo()
@@ -105,10 +113,10 @@ if __name__ == "__main__":
     idealRightCamera.P=intrin.Pr.flatten()
     idealRightCamera.header.frame_id=transformNames[4]
 
-    idealRightCamera.roi.x_offset=intrin.rROI[1]
-    idealRightCamera.roi.y_offset=intrin.rROI[0]
-    idealRightCamera.roi.height=intrin.rROI[2]
-    idealRightCamera.roi.width=intrin.rROI[3]
+    idealRightCamera.roi.x_offset=overlapROI[1]
+    idealRightCamera.roi.y_offset=overlapROI[0]
+    idealRightCamera.roi.height=overlapROI[2]
+    idealRightCamera.roi.width=overlapROI[3]
 
 
     cameraPublisherLeft=rospy.Publisher(rospy.get_name()+"/idealLeft/CameraInfo",CameraInfo,queue_size=10,latch=True)

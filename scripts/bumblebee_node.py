@@ -56,6 +56,8 @@ class bumblebeeCamera():
         leftPub.append(rospy.Publisher(rospy.get_name()+"/left/image_rect_color",Image,queue_size=8))
         leftPub.append(rospy.Publisher(rospy.get_name()+"/left/ROI",Image,queue_size=8))
         self.Publishers.append(leftPub)
+        #self.leftinfoPub=rospy.Publisher(rospy.get_name())
+
         rightPub=[]
         rightPub.append(rospy.Publisher(rospy.get_name()+"/right/image_raw",Image,queue_size=8))
         rightPub.append(rospy.Publisher(rospy.get_name()+"/right/image",Image,queue_size=8))
@@ -142,8 +144,8 @@ class bumblebeeCamera():
 
         self.Info[0].header.stamp = pubTime
         self.Info[1].header.stamp=pubTime
-        leftinfoPub.publish(lInfo)
-        rightinfoPub.publish(rInfo)
+        #leftinfoPub.publish(lInfo)
+        #rightinfoPub.publish(rInfo)
         for index in range(0,len(limages)):
             lImageMessage=self.cvb.cv2_to_imgmsg(limages[index])
             lImageMessage.header.stamp=pubTime
