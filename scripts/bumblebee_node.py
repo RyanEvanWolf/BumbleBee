@@ -137,8 +137,8 @@ class bumblebeeCamera():
         rimages.append(copy.deepcopy(cv2.remap(rimages[2],self.Mapping[1][0],self.Mapping[1][1],cv2.INTER_LINEAR)))
         imageEncoding.append("rgb8")
 
-        limages.append(copy.deepcopy(limages[3][self.ROI[0][1]:self.ROI[0][2],self.ROI[0][0]:self.ROI[0][3]]))
-        rimages.append(copy.deepcopy(rimages[3][self.ROI[1][1]:self.ROI[1][2],self.ROI[1][0]:self.ROI[1][3]]))#offreply.right.y_offset:offreply.right.height, offreply.right.x_offset:offreply.right.width]))
+        limages.append(copy.deepcopy(limages[3][self.ROI[0][1]:(self.ROI[0][1]+self.ROI[0][2]),self.ROI[0][0]:(self.ROI[0][0]+self.ROI[0][3])]))
+        rimages.append(copy.deepcopy(rimages[3][self.ROI[1][1]:(self.ROI[1][1]+self.ROI[1][2]),self.ROI[1][0]:(self.ROI[1][0]+self.ROI[1][3])]))#offreply.right.y_offset:offreply.right.height, offreply.right.x_offset:offreply.right.width]))
         imageEncoding.append("mono8")
         pubTime = rospy.get_rostime()
 
