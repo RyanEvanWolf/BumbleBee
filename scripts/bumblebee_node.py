@@ -16,11 +16,11 @@ import cv2
 import pickle
 import numpy as np
 
-lMap = pickle.load(open("/home/ryan/currentTesting/stereoOut/left_Map.p", "rb"))
+#lMap = pickle.load(open("/home/ryan/currentTesting/stereoOut/left_Map.p", "rb"))
 #
 #
 #list of bumbleBee topics
-# /bumblebee_configuration/Q
+# /bumblebee_conf#iguration/Q
 # /bumblebee_configuration/idealLeft/CameraInfo
 # /bumblebee_configuration/idealLeft/floatX
 # /bumblebee_configuration/idealLeft/floatY
