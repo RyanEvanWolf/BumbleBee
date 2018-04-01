@@ -159,6 +159,7 @@ class bumblebeeCamera():
             self.Publishers[1][index].publish(rImageMessage)
 
 rospy.init_node('bumblebee')
+time.sleep(2)
 
 test=bumblebeeCamera(sys.argv[1])
 
