@@ -149,7 +149,13 @@ if __name__ == "__main__":
     rmapfyPub.publish(cvb.cv2_to_imgmsg(rMap.floatYMapping))
     print("published rectification Info")
     QPub=rospy.Publisher(rospy.get_name()+"/Q",Image,queue_size=3,latch=True)
-    QPub.publish(cvb.cv2_to_imgmsg(intrin.Q))
+    ###############
+    ####in reference to issue bumblebee#3
+    print(intrin.Q)
+    modifiedQ=intrin.Q
+    modifiedQ[3,2]=modifiedQ[3,2]*-1.0
+    print("new",modifiedQ)
+    QPub.publish(cvb.cv2_to_imgmsg(modifiedQ))
     print("bumblebee Configuration Server Running")
     if(publishData):
         rate=rospy.Rate(15)

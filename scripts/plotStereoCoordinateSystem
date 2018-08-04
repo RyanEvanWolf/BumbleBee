@@ -1,0 +1,130 @@
+#!/usr/bin/env python
+import numpy as np
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from mpl_toolkits.mplot3d import Axes3D
+import pickle
+
+
+from Queue import Queue
+
+
+def getHomogZeros():
+    out=np.zeros((4,1),dtype=np.float64)
+    out[3,0]=1
+    return out
+
+
+class poseAxis():
+    def __init__(self,frame="world",H=np.eye(4,dtype=np.float64),scale=0.1):
+        self.name=frame
+        self.H=H
+        self.centre=getHomogZeros()
+        self.x=getHomogZeros()
+        self.x[0,0]=scale
+        self.y=getHomogZeros()
+        self.y[1,0]=scale
+        self.z=getHomogZeros()
+        self.z[2,0]=scale
+        self.xCol=(1,0,0,1)
+        self.yCol=(0,1,0,1)
+        self.zCol=(0,0,1,1)
+    def rigidBody(self,H):
+        self.centre=H.dot(self.centre)
+        self.x=H.dot(self.x)
+        self.y=H.dot(self.y)
+        self.z=H.dot(self.z)
+    
+
+class display3D:
+    def __init__(self,coordTransform=np.eye(4,dtype=np.float64)):
+        self.coordTransform=coordTransform
+        self.Q=Queue()
+
+        self.data={}
+        self.initGraph()
+        #self.addAxis("world")
+        self.ani=animation.FuncAnimation(self.fig,self.update,interval=200)
+    def addAxis(self,newAxis):
+        print(newAxis.centre)
+        xAxis,=self.ax.plot3D((newAxis.centre[0,0],newAxis.x[0,0]),
+                            (newAxis.centre[1,0],newAxis.x[1,0]),
+                            (newAxis.centre[2,0],newAxis.x[2,0]),
+                            color=newAxis.xCol)
+        yAxis,=self.ax.plot3D((newAxis.centre[0,0],newAxis.y[0,0]),
+                            (newAxis.centre[1,0],newAxis.y[1,0]),
+                            (newAxis.centre[2,0],newAxis.y[2,0]),
+                            color=newAxis.yCol)
+        zAxis,=self.ax.plot3D((newAxis.centre[0,0],newAxis.z[0,0]),
+                            (newAxis.centre[1,0],newAxis.z[1,0]),
+                            (newAxis.centre[2,0],newAxis.z[2,0]),
+                            color=newAxis.zCol,label=newAxis.name)
+        self.data[newAxis.name]=[xAxis,yAxis,zAxis]
+    # def updateAxis(self,key,axis):
+    #     #######
+    #     ##transform into display Frame
+    #     poseCentre=axis.Pose.dot(axis.centre)
+    #     poseX=axis.Pose.dot(axis.x)
+    #     poseY=axis.Pose.dot(axis.y)
+    #     poseZ=axis.Pose.dot(axis.z)
+    #     if(key!="world"):
+    #         newCentre=self.coordTransform.dot(poseCentre)
+    #         newX=self.coordTransform.dot(poseX)
+    #         newY=self.coordTransform.dot(poseY)
+    #         newZ=self.coordTransform.dot(poseZ)
+    #     else:
+    #         newCentre=poseCentre
+    #         newX=poseX
+    #         newY=poseY
+    #         newZ=poseZ
+    #     self.data[key]["graph"]["X"].set_xdata((newCentre[0,0],newX[0,0]))
+    #     self.data[key]["graph"]["X"].set_ydata((newCentre[1,0],newX[1,0]))
+    #     self.data[key]["graph"]["X"].set_3d_properties((newCentre[2,0],newX[2,0]))
+    #     self.data[key]["graph"]["Y"].set_xdata((newCentre[0,0],newY[0,0]))
+    #     self.data[key]["graph"]["Y"].set_ydata((newCentre[1,0],newY[1,0]))
+    #     self.data[key]["graph"]["Y"].set_3d_properties((newCentre[2,0],newY[2,0]))
+    #     self.data[key]["graph"]["Z"].set_xdata((newCentre[0,0],newZ[0,0]))
+    #     self.data[key]["graph"]["Z"].set_ydata((newCentre[1,0],newZ[1,0]))
+    #     self.data[key]["graph"]["Z"].set_3d_properties((newCentre[2,0],newZ[2,0]))
+    def update(self,i):
+        if(not self.Q.empty()):
+            newPose=self.Q.get()
+            self.addAxis(newPose)
+            # if(newPose[0] not in self.data):
+            #     self.addAxis(newPose[0])
+            # self.updateAxis(newPose[0],newPose[1])
+    def initGraph(self):
+        self.fig = plt.figure()
+        self.ax = self.fig.gca(projection='3d')
+        self.ax.set_xlabel('X axis')
+        self.ax.set_ylabel('Y axis')
+        self.ax.set_zlabel('Z axis')
+        self.ax.legend()
+
+
+f=open("/home/ryan/Calibration/extrinsicCalibration.p","r")
+cam=pickle.load(f)
+f.close()
+
+
+lH,rH,lrH,rrH=cam.getTransformChain()
+
+
+
+leftCamera=poseAxis("left")
+rcam=poseAxis("right")
+rcam.rigidBody(np.linalg.inv(rightCameraHomog))
+
+lrect=poseAxis("Lr")
+lrect.rigidBody(leftRectifiedHomog)
+
+print(leftCamera.centre)
+
+g=display3D()
+g.Q.put(leftCamera)
+g.Q.put(rcam)
+g.Q.put(lrect)
+g.Q.put()
+plt.show()
