@@ -8,11 +8,20 @@ import cv2
 import scipy.stats.mstats as stat
 
 import matplotlib.pyplot as plt
-from bumblebee_calibration import *
+from bumble.calibration import *
 
 import pickle
 import copy
-calibrationDirectory=sys.argv[1]
+import argparse
+
+parser =argparse.ArgumentParser()
+parser.add_argument("inDir",
+                    help=("The full directory to the stereo calibration output folder"),
+                    type=str)
+args,unknown=parser.parse_known_args()
+
+
+calibrationDirectory=args.inDir
 plt.style.use('seaborn')
 
 
@@ -172,3 +181,4 @@ plt.show()
 
 
 
+ 

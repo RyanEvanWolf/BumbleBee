@@ -36,7 +36,7 @@ find_package(Boost REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(BasicSLAMStructures REQUIRED CONFIG)
 
-
+catkin_python_setup()
 
 
 MESSAGE(STATUS "Opencv includes  ${OpenCV_INCLUDE_DIRS}")

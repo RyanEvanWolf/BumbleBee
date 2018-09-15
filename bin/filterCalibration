@@ -8,22 +8,32 @@ import cv2
 import scipy.stats.mstats as stat
 
 import matplotlib.pyplot as plt
-from bumblebee_calibration import *
+from bumblebee.calibration import *
 
 import pickle
+import argparse
 
-inputData=sys.argv[1]+"/Calibration/singleCalibrationData.p"
-filteredOut=sys.argv[2]
-if(len(sys.argv)>3):
-    errorThreshold=float(sys.argv[3])
-else:
-    errorThreshold=1.5
+parser =argparse.ArgumentParser()
+parser.add_argument("inputPickleFile",
+                    help=("The absolute file path to the singleCalibrationData.p output file from a calibration"),
+                    type=str)
+parser.add_argument("outputDir",
+                    help=("The output Directory to which the filtered images must be saved, it is typically easier to create a whole new folder for it"),type=str)
+parser.add_argument("--threshold",default=1.5,help=("The RMS pixel threshold for a stereo image pair before it is considered an outlier image"),type=float)
+args,unknown=parser.parse_known_args()
+
+
+inputData=args.inputPickleFile
+filteredOut=args.outputDir
+errorThreshold=args.threshold
 
 print("Loading calibration data from "+inputData)
 calibrationData=pickle.load(open(inputData, "rb" ))
 print("file opened")
 plt.style.use('seaborn')
 
+if(not os.path.exists(filteredOut)):
+    os.makedirs(filteredOut)
 
 
 print(calibrationData.getRMSreprojection())
@@ -77,5 +87,5 @@ for i in inputIndexes:
     cv2.waitKey(20)
 
 
-plt.savefig(sys.argv[1]+"/Calibration/ErrorFigure.png",format='png',dpi=400)#,figsize=(1000,1000))
+plt.savefig(inputData[:inputData.rfind("/")]+"/ErrorFigure.png",format='png',dpi=400)#,figsize=(1000,1000))
 plt.show()
