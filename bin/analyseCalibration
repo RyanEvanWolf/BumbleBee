@@ -8,7 +8,8 @@ import cv2
 import scipy.stats.mstats as stat
 
 import matplotlib.pyplot as plt
-from bumble.calibration import *
+from bumblebee.calibration import *
+from bumblebee.drawing import drawCalibrationCoverageMap,drawEpiPolarLines,plotErrorHist
 
 import pickle
 import copy
@@ -38,9 +39,12 @@ print("camera info Load")
 ##calculate epipolar error
 
 leftRectified=[]
+leftRectifiedFound=[]
 rightRectified=[]
+rightRectifiedFound=[]
 leftDebayer=[]
 rightDebayer=[]
+
 
 
 ##list of list of found points by image, then by checkerboard position
@@ -48,10 +52,6 @@ leftFoundPoints=[]
 rightFoundPoints=[]
 epiError=[]
 epiPolarError=0
-
-
-outWindow=cv2.namedWindow("outWindow",cv2.WINDOW_NORMAL)
-
 
 outFolder=calibrationDirectory+"/Matches"
 
@@ -90,68 +90,77 @@ for fileName in calibrationData.inCalibrationData.imgName:
         RMSimage = 0
         #######
         ##Draw Corners
-        drawnLeft = copy.deepcopy(cv2.cvtColor(leftRectified[-1], cv2.COLOR_GRAY2RGB))
-        drawnRight = copy.deepcopy(cv2.cvtColor(rightRectified[-1], cv2.COLOR_GRAY2RGB))
-        cv2.drawChessboardCorners(drawnLeft,calibrationData.inCalibrationData.meta.getBoardSize(), lCorners, lFound)
-        cv2.drawChessboardCorners(drawnRight,calibrationData.inCalibrationData.meta.getBoardSize(), rCorners, rFound)
-        Combined = np.hstack((drawnLeft, drawnRight))
+        leftFoundPoints.append(lCorners)
+        rightFoundPoints.append(rCorners)
+        leftRectifiedFound.append(copy.deepcopy(cv2.cvtColor(leftRectified[-1], cv2.COLOR_GRAY2RGB)))
+        rightRectified.append(copy.deepcopy(cv2.cvtColor(rightRectified[-1], cv2.COLOR_GRAY2RGB)))
+        # drawnLeft = copy.deepcopy(cv2.cvtColor(leftRectified[-1], cv2.COLOR_GRAY2RGB))
+        # drawnRight = copy.deepcopy(cv2.cvtColor(rightRectified[-1], cv2.COLOR_GRAY2RGB))
+        # cv2.drawChessboardCorners(drawnLeft,calibrationData.inCalibrationData.meta.getBoardSize(), lCorners, lFound)
+        # cv2.drawChessboardCorners(drawnRight,calibrationData.inCalibrationData.meta.getBoardSize(), rCorners, rFound)
+        # Combined = np.hstack((drawnLeft, drawnRight))
         for i in range(len(lCorners)):
             RMSimage+=np.power((lCorners[i]-rCorners[i])[0,1],2)
             epiPolarError+=np.power((lCorners[i]-rCorners[i])[0,1],2)
-            cv2.line(Combined, (lCorners[i][0][0], lCorners[i][0][1]),
-                     (int(rCorners[i][0][0] + leftRectified[-1].shape[1]), rCorners[i][0][1]), (0, 255, 0))
+            # cv2.line(Combined, (lCorners[i][0][0], lCorners[i][0][1]),
+            #          (int(rCorners[i][0][0] + leftRectified[-1].shape[1]), rCorners[i][0][1]), (0, 255, 0))
         RMSimage=np.sqrt(RMSimage/len(lCorners))
         epiError.append(RMSimage)
-        cv2.imwrite(outFolder+"/"+fileName,Combined)
+        #cv2.imwrite(outFolder+"/"+fileName,Combined)
     else:
         print("NO CHECKER")
-    outshow=copy.deepcopy(leftRectified[-1])
-    cv2.imshow("outWindow",Combined)
-    cv2.waitKey(1)
+    # outshow=copy.deepcopy(leftRectified[-1])
+    # cv2.imshow("outWindow",Combined)
+    # cv2.waitKey(1)
 
 totalPoints=(totalImagesFound*
              calibrationData.inCalibrationData.meta.getBoardSize()[0]*
              calibrationData.inCalibrationData.meta.getBoardSize()[1])
-print(totalPoints)
+print("Points in calculation: ",totalPoints)
 epiPolarError= np.sqrt(epiPolarError/totalPoints)
-print(epiPolarError)
+print("Net EpiPolar Error : ",epiPolarError)
+print("RMS ERROR :",calibrationData.RMS)
 
-f1 = plt.figure()
-ax1 = f1.add_subplot(122)
-ax1.hist(epiError,25)
-ax1.set_xlabel("Average Epipolar Error")
-ax1.set_ylabel("Total Images")
+f2,ax2=plotErrorHist(epiError,"Average Epipolar Error")
+
+# f1 = plt.figure()
+# ax1 = f1.add_subplot(122)
+# ax1.hist(epiError,25)
+# ax1.set_xlabel("Average Epipolar Error")
+# ax1.set_ylabel("Total Images")
 
 print(intrin.lROI)
 print(intrin.rROI)
-perc=100*(intrin.lROI[2]*intrin.lROI[3]/float(calibrationData.inCalibrationData.meta.imgSize[0]*
+
+overlapROI=getROIoverlap(intrin.lROI,intrin.rROI)
+perc=100*(overlapROI[2]*overlapROI[3]/float(calibrationData.inCalibrationData.meta.imgSize[0]*
                                      calibrationData.inCalibrationData.meta.imgSize[1]))
 print("coverage %"+ str(perc))
-leftCoverage=copy.deepcopy(calibrationData.inCalibrationData.showImageCoverage()[0])
-rightCoverage=copy.deepcopy(calibrationData.inCalibrationData.showImageCoverage()[1])
+# leftCoverage=copy.deepcopy(calibrationData.inCalibrationData.showImageCoverage()[0])
+# rightCoverage=copy.deepcopy(calibrationData.inCalibrationData.showImageCoverage()[1])
 
-leftCorner1=(intrin.lROI[1],intrin.lROI[0])##y and x swopped around in np
-leftCorner2=(intrin.lROI[1]+intrin.lROI[3],intrin.lROI[0]+intrin.lROI[2])
+# leftCorner1=(intrin.lROI[1],intrin.lROI[0])##y and x swopped around in np
+# leftCorner2=(intrin.lROI[1]+intrin.lROI[3],intrin.lROI[0]+intrin.lROI[2])
 
-rightCorner1=(intrin.rROI[1],intrin.rROI[0])
-rightCorner2=(intrin.rROI[1]+intrin.rROI[3],intrin.rROI[0]+intrin.rROI[2])
+# rightCorner1=(intrin.rROI[1],intrin.rROI[0])
+# rightCorner2=(intrin.rROI[1]+intrin.rROI[3],intrin.rROI[0]+intrin.rROI[2])
 
-cv2.rectangle(leftCoverage,leftCorner1,leftCorner2,(0,0,255),3)
-cv2.rectangle(rightCoverage,rightCorner1,rightCorner2,(0,0,255),3)
+# cv2.rectangle(leftCoverage,leftCorner1,leftCorner2,(0,0,255),3)
+# cv2.rectangle(rightCoverage,rightCorner1,rightCorner2,(0,0,255),3)
 
-Coverage=np.hstack((leftCoverage, rightCoverage))
+# Coverage=np.hstack((leftCoverage, rightCoverage))
 
-for i in range(35):
-    cv2.line(Coverage, (0, int(i*Coverage.shape[0]/35.0)),
-             (Coverage.shape[1], int(i*Coverage.shape[0]/35.0)), (0, 0, 0,0.3))
+# for i in range(35):
+#     cv2.line(Coverage, (0, int(i*Coverage.shape[0]/35.0)),
+#              (Coverage.shape[1], int(i*Coverage.shape[0]/35.0)), (0, 0, 0,0.3))
 
-cv2.line(Coverage, (int(Coverage.shape[1]/2.0),0),
-             (int(Coverage.shape[1]/2.0), Coverage.shape[1]), (0, 0, 0,1))
+# cv2.line(Coverage, (int(Coverage.shape[1]/2.0),0),
+#              (int(Coverage.shape[1]/2.0), Coverage.shape[1]), (0, 0, 0,1))
 
-cv2.imshow("coverage",Coverage)
+# cv2.imshow("coverage",Coverage)
 
-cv2.imwrite(calibrationDirectory+"/Coverage.png",Coverage)
-cv2.waitKey(1000)
+# cv2.imwrite(calibrationDirectory+"/Coverage.png",Coverage)
+# cv2.waitKey(1000)
 
 leftImagesAvgRms=[]
 rightImagesAvgRms=[]
@@ -162,22 +171,21 @@ for i in range(len(calibrationData.inCalibrationData.LeftPoints)):
     rightImagesAvgRms.append(calibrationData.inCalibrationData.getSingleImageRMS(i)[1])
     combined.append((calibrationData.inCalibrationData.getSingleImageRMS(i)[0]+calibrationData.inCalibrationData.getSingleImageRMS(i)[1])/2.0)
 
-ax2 = f1.add_subplot(121)
-ax2.hist(combined,15)
-ax2.set_xlabel("Average Input RMS Error")
-ax2.set_ylabel("Total Images")
 
+f,ax=plotErrorHist(combined,"Average Input RMS Error",15)
 
+f2.savefig(calibrationDirectory+"/EpiErrorFigure.png",format='png',dpi=400)
+f.savefig(calibrationDirectory+"/InputErrorFigure.png",format='png',dpi=400)
 
-
-plt.savefig(calibrationDirectory+"/EpiErrorFigure.png",format='png',dpi=400)
+###draw left image coverageMap
+leftCoverageMap=drawCalibrationCoverageMap(leftRectifiedFound,leftFoundPoints,intrin.lROI,overlapROI)
 
 
 intrin.p()
 extrin.p()
-plt.show()
-
-
+#plt.show()
+cv2.imshow("outMap",leftCoverageMap)
+cv2.waitKey(0)
 
 
 

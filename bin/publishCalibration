@@ -1,0 +1,96 @@
+#!/usr/bin/env python
+import rospy
+import pickle
+
+from geometry_msgs.msg import TransformStamped,Transform,Quaternion,Vector3
+from sensor_msgs.msg import CameraInfo,RegionOfInterest,Image
+import tf.transformations
+########Bumblebee
+
+from cv_bridge import CvBridge
+from bumblebee.calibration import *
+import bumblebee.utils as butil
+import argparse
+import time
+
+import copy
+parser =argparse.ArgumentParser()
+parser.add_argument("CalibrationDirectory",
+                    help="Directory to the stereo calibrated output file",
+                    type=str)
+parser.add_argument("--debug",default=True,
+                    help="Print debug information such as transforms and camera matrices",
+                    type=bool)
+parser.add_argument("--leftTopicPrefix",default="ideal/leftRectified",type=str)
+parser.add_argument("--rightTopicPrefix",default="ideal/rightRectified",type=str)
+args,unknown=parser.parse_known_args()
+
+
+
+nodeName=rospy.get_name()
+calibrationDirectory = args.CalibrationDirectory
+rospy.init_node("bumblebee_config")
+cvb = CvBridge()
+time.sleep(2)
+
+
+lMap = butil.getPickledObject(calibrationDirectory + "/left_Map.p")
+print("Left Mapping Loaded")
+rMap = butil.getPickledObject(calibrationDirectory + "/right_Map.p")
+print("Right Mapping Loaded")
+extrin = butil.getPickledObject(calibrationDirectory + "/extrinsicCalibration.p")
+print("Camera Extrinsics Loaded")
+intrin = butil.getPickledObject(calibrationDirectory + "/intrinsicCalibration.p")
+print("Camera Intrinsics Loaded")
+stereoCalibration=butil.getPickledObject(calibrationDirectory + "/StereoCalibration.p")
+
+
+idealLeftCamera=CameraInfo()
+idealLeftCamera.height=stereoCalibration.inCalibrationData.meta.imgSize[0]
+idealLeftCamera.width=stereoCalibration.inCalibrationData.meta.imgSize[1]
+idealLeftCamera.distortion_model="plumb_bob" #TODO load based on distortion Model
+idealLeftCamera.D=[0,0,0,0,0]
+idealLeftCamera.K=intrin.Pl[0:3,0:3].flatten()
+idealLeftCamera.R=np.identity(3,np.float64).flatten()
+idealLeftCamera.P=intrin.Pl.flatten()
+idealLeftCamera.header.frame_id=args.leftTopicPrefix
+
+#im[y:y + h, x:x + w]
+overlapROI=getROIoverlap(intrin.lROI,intrin.rROI)
+ROIimage=copy.deepcopy(drawROI(intrin.lROI,intrin.rROI,overlapROI))
+
+cv2.imwrite(args.CalibrationDirectory+"/configROI.ppm",ROIimage)
+
+
+pubROIimage=rospy.Publisher(rospy.get_name()+"/roiImage",Image,queue_size=3,latch=True)
+pubROIimage.publish(cvb.cv2_to_imgmsg(ROIimage))
+
+idealLeftCamera.roi.x_offset=overlapROI[1]
+idealLeftCamera.roi.y_offset=overlapROI[0]
+idealLeftCamera.roi.height=overlapROI[2]
+idealLeftCamera.roi.width=overlapROI[3]
+
+idealRightCamera=CameraInfo()
+idealRightCamera.height=stereoCalibration.inCalibrationData.meta.imgSize[0]
+idealRightCamera.width=stereoCalibration.inCalibrationData.meta.imgSize[1]
+idealRightCamera.distortion_model="plumb_bob"
+idealRightCamera.D=[0,0,0,0,0]
+
+idealRightCamera.K=intrin.Pr[0:3,0:3].flatten()
+idealRightCamera.R=np.identity(3,np.float64).flatten()
+idealRightCamera.P=intrin.Pr.flatten()
+idealRightCamera.header.frame_id=args.rightTopicPrefix
+
+idealRightCamera.roi.x_offset=overlapROI[1]
+idealRightCamera.roi.y_offset=overlapROI[0]
+idealRightCamera.roi.height=overlapROI[2]
+idealRightCamera.roi.width=overlapROI[3]
+
+
+cameraPublisherLeft=rospy.Publisher(rospy.get_name()+args.leftTopicPrefix+"/CameraInfo",CameraInfo,queue_size=10,latch=True)
+cameraPublisherRight = rospy.Publisher(rospy.get_name() +args.rightTopicPrefix+"/CameraInfo", CameraInfo, queue_size=10,latch=True)
+cameraPublisherLeft.publish(idealLeftCamera)
+cameraPublisherRight.publish(idealRightCamera)
+print("published intrinsic Info")
+########publish Rectification Maps
+rospy.spin()

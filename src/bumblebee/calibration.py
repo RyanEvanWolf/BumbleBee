@@ -2,17 +2,20 @@ import numpy as np
 from sensor_msgs.msg import CameraInfo,RegionOfInterest
 ###
 #single location for all standard required classes and data structures
-
+from geometry_msgs.msg import TransformStamped,Transform,Quaternion,Vector3
 import rospy
 import sys
 import os
 import cv2
+from tf.transformations import quaternion_from_matrix,quaternion_from_euler,quaternion_matrix,euler_from_matrix
 
 import scipy.stats.mstats as stat
 
 import matplotlib.pyplot as plt
 
 import pickle
+
+from bumblebee.utils import createHomog,msgFromTransform
 
 
 def drawROI(leftROI,rightROI,overlapROI,imgSize=(1024,768)):
@@ -32,16 +35,12 @@ def drawROI(leftROI,rightROI,overlapROI,imgSize=(1024,768)):
     return overallImage
 
 def getROIoverlap(leftROI,rightROI):
-    ###y,x,height,width
+    print(leftROI,rightROI)
     print(leftROI,rightROI)
     x=max(leftROI[0],rightROI[0])
     y=max(leftROI[1],rightROI[1])
     w=min(leftROI[0]+leftROI[2],rightROI[0]+rightROI[2])-x
     h=min(leftROI[1]+leftROI[3],rightROI[1]+rightROI[3])-y
-    #x = min(a[0], b[0])
-    #y = min(a[1], b[1])
-    #w = max(a[0] + a[2], b[0] + b[2]) - x
-    #h = max(a[1] + a[3], b[1] + b[3]) - y
     return (x, y, w, h)
 
 class RectificationInfo():
@@ -265,39 +264,78 @@ class StereoExtrinsicInfo():
         self.Rleft=np.identity(3,np.float64)
         self.Rright=np.identity(3,np.float64)
     def getBaseline(self):
-        print("R",self.R)
-        rMatrix=np.zeros(shape=(3,3))
-        cv2.Rodrigues(self.R,rMatrix)
-        return [self.T,rMatrix]
-    def getTransformChain(self):
-        leftFrame=np.identity(4,np.float64)
-        rightFrame=np.zeros((4,4),np.float64)
+        ###transfrom for a point from the left to right coordinate frames
+        return createHomog(self.R,self.T)
+    def getRectifiedBaseline(self):
+        ###transfrom for a point from the left to right coordinate frames
+        leftRectifiedFrame=createHomog(self.Rleft,np.zeros((3,1)))#np.linalg.inv(createHomog(self.Rleft,np.zeros((3,1))))
+        
+        rightFrame=self.getBaseline()
 
-        rightFrame[0:3,0:3]=self.R
-        rightFrame[0,3]=self.T[0,0]
-        rightFrame[1,3]=self.T[1,0]
-        rightFrame[2,3]=self.T[2,0]
-        rightFrame[3,3]=1
+        rightRectifiedFrame=createHomog(self.Rright,np.zeros((3,1)))#np.linalg.inv(createHomog(self.Rright,np.zeros((3,1))))
+        baseLine=rightRectifiedFrame.dot(rightFrame)
+
+        baseLine=  baseLine.dot(np.linalg.inv(leftRectifiedFrame))
+        ###np.linalg.inv(leftRectifiedFrame).dot(rightFrame).dot(rightRectifiedFrame)
+        return baseLine
+    def getRectifiedMessages(self):
+        ##########
+        ###base_link -> rectified - > left
+        ###             |            
+        ###             v
+        ###             right
+        ###
+        ###ros uses transforms from coordinate frame to coordinate frame,
+        ###so all the baselines have to be inverted for display purposes
+        idealBase=np.linalg.inv(self.getRectifiedBaseline())
+
+        blink=TransformStamped()
+        blink.transform=msgFromTransform(np.eye(4))
+        blink.header.frame_id="base_link"
+        blink.child_frame_id="ideal"
+
+        lr=TransformStamped()
+        lr.transform=msgFromTransform(np.eye(4))
+        lr.header.frame_id="ideal"
+        lr.child_frame_id="ideal/leftRectified"
+    
+        rr=TransformStamped()
+        rr.transform=msgFromTransform(idealBase)
+        rr.header.frame_id="ideal/leftRectified"
+        rr.child_frame_id="ideal/rightRectified"
+
+        return [blink,lr,rr]
+    def getTFmessages(self):
+        ###ros uses transforms from coordinate frame to coordinate frame,
+        ###so all the baselines have to be inverted for display purposes as they are point transforms
+        realBase=np.linalg.inv(self.getBaseline())
+        blink=TransformStamped()
+        blink.transform=msgFromTransform(np.eye(4))
+        blink.header.frame_id="base_link"
+        blink.child_frame_id="real"
+
+        l=TransformStamped()
+        l.transform=msgFromTransform(np.eye(4))
+        l.header.frame_id="real"
+        l.child_frame_id="real/left"
 
 
-        leftRectifiedFrame=np.zeros((4,4),np.float64)
-        leftRectifiedFrame[0:3,0:3]=self.Rleft
-        leftRectifiedFrame[3,3]=1
+        lr=TransformStamped()
+        lr.transform=msgFromTransform(np.linalg.inv(createHomog(self.Rleft,np.zeros((3,1)))))
+        lr.header.frame_id="real/left"
+        lr.child_frame_id="real/leftRectified"
 
-        rightRectifiedFrame=np.zeros((4,4),np.float64)
-        rightRectifiedFrame[0:3,0:3]=self.Rright
-        rightRectifiedFrame[3,3]=1
+        r=TransformStamped()
+        r.transform=msgFromTransform(realBase)
+        r.header.frame_id="real/left"
+        r.child_frame_id="real/right"
 
-        return [leftFrame,rightFrame,leftRectifiedFrame,rightRectifiedFrame]
-    def getIdealBaseline(self):
-        #L---->lR
-        #\
-        #\R----->rR
-        transform=self.getTransformChain()
-        combinedTransform=np.dot(np.linalg.inv(transform[2]),transform[0])
-        combinedTransform=np.dot(combinedTransform,transform[1])
-        combinedTransform=np.dot(combinedTransform,transform[3])
-        return combinedTransform
+        rr=TransformStamped()
+        rr.transform=msgFromTransform(np.linalg.inv(createHomog(self.Rright,np.zeros((3,1)))))
+        rr.header.frame_id="real/right"
+        rr.child_frame_id="real/rightRectified"
+
+        return [blink,l,lr,r,rr]
     def p(self):
         print("Extrinsic---")
         print("E",self.E)
@@ -306,11 +344,12 @@ class StereoExtrinsicInfo():
         print("T",self.T)
         print("Rleft",self.Rleft)
         print("Rright",self.Rright)
-        print("Ideal")
-        print(self.getIdealBaseline())
-        print("Baseline")
+        print("Rectified")
+        print(self.getRectifiedBaseline())
+        print(np.linalg.inv(self.getRectifiedBaseline()))
+        print("Real Baseline")
         print(self.getBaseline())
-
+        print(np.linalg.inv(self.getBaseline()))
 
 class StereoIntrinsicInfo():
     def __init__(self):

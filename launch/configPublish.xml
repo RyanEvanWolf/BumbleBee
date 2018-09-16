@@ -1,0 +1,5 @@
+<launch>
+   <arg name="CalibrationDirectory" default="/home/ryan/Calibration"/>
+   <node name="bumblebee_tf_publisher" type="publishTF" pkg="bumblebee" args="$(arg CalibrationDirectory)" output="screen"/>
+   <node name="bumblebee_configuration" type="publishCalibration" pkg="bumblebee" args="$(arg CalibrationDirectory)" output="screen"/>
+</launch>

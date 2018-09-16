@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+import pickle
+import rospy
+from geometry_msgs.msg import TransformStamped,Transform,Quaternion,Vector3
+from sensor_msgs.msg import CameraInfo,RegionOfInterest,Image
+import tf.transformations
+########Bumblebee
+
+from cv_bridge import CvBridge
+from bumblebee.calibration import *
+import bumblebee.utils as butil
+
+import copy
+import argparse
+
+parser =argparse.ArgumentParser()
+parser.add_argument("CalibrationDirectory",
+                    help="Directory to the stereo calibrated output file",
+                    type=str)
+args,unknown=parser.parse_known_args()
+
+calibrationDirectory = args.CalibrationDirectory
+nodeName="bumblebee_extrinsics"
+rospy.init_node(nodeName)
+cvb = CvBridge()
+
+
+extrin = pickle.load(open(calibrationDirectory + "/extrinsicCalibration.p", "rb"))
+print("Camera Extrinsics Loaded")
+
+displayTransforms=[]
+######
+##display transform
+#####
+
+displayConversion=TransformStamped()
+displayConversion.header.frame_id="world"
+displayConversion.child_frame_id="base_link"
+
+print(butil.composeR(0,-90,0))
+
+displayOffset=np.zeros((3,1))
+displayOffset[1,0]=0.3
+rotation=butil.createHomog(butil.composeR(0,-90,0),displayOffset)
+displayConversion.transform=butil.msgFromTransform(rotation)
+
+displayTransforms.append(displayConversion)
+displayTransforms+=extrin.getRectifiedMessages()
+displayTransforms+=extrin.getTFmessages()
+
+pub=tf.TransformBroadcaster()
+rate=rospy.Rate(15)
+while(not rospy.is_shutdown()):
+    time=rospy.Time.now()
+    for i in displayTransforms:
+        i.header.stamp=time
+        pub.sendTransformMessage(i)
+    rate.sleep()
