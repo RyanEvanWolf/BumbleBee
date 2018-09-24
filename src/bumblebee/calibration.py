@@ -28,7 +28,7 @@ def drawROI(leftROI,rightROI,overlapROI,imgSize=(1024,768)):
     cv2.rectangle(cameraImage, (leftROI[1],leftROI[0]),
                    (leftROI[1]+leftROI[3],leftROI[0]+leftROI[2]),(0,0,255),10)
     cv2.rectangle(cameraImage, (rightROI[1],rightROI[0]),
-                   (rightROI[1]+rightROI[3],rightRdOI[0]+rightROI[2]),(255,0,0),10)
+                   (rightROI[1]+rightROI[3],rightROI[0]+rightROI[2]),(255,0,0),10)
     cv2.rectangle(overlapImage, (overlapROI[1],overlapROI[0]),
                    (overlapROI[1]+overlapROI[3],overlapROI[0]+overlapROI[2]),(0,255,0),-1)
     overallImage=cv2.addWeighted(cameraImage, 0.7, overlapImage, 0.2, 0)

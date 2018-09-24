@@ -29,7 +29,7 @@ args,unknown=parser.parse_known_args()
 
 nodeName=rospy.get_name()
 calibrationDirectory = args.CalibrationDirectory
-rospy.init_node("bumblebee_config")
+rospy.init_node("bumblebee_configuration")
 cvb = CvBridge()
 time.sleep(2)
 
@@ -85,10 +85,11 @@ idealRightCamera.roi.x_offset=overlapROI[1]
 idealRightCamera.roi.y_offset=overlapROI[0]
 idealRightCamera.roi.height=overlapROI[2]
 idealRightCamera.roi.width=overlapROI[3]
+QPub=rospy.Publisher(rospy.get_name()+"/Q",Image,queue_size=3,latch=True)
 
-
-cameraPublisherLeft=rospy.Publisher(rospy.get_name()+args.leftTopicPrefix+"/CameraInfo",CameraInfo,queue_size=10,latch=True)
-cameraPublisherRight = rospy.Publisher(rospy.get_name() +args.rightTopicPrefix+"/CameraInfo", CameraInfo, queue_size=10,latch=True)
+cameraPublisherLeft=rospy.Publisher(rospy.get_name()+"/"+args.leftTopicPrefix+"/CameraInfo",CameraInfo,queue_size=10,latch=True)
+cameraPublisherRight = rospy.Publisher(rospy.get_name() +"/"+args.rightTopicPrefix+"/CameraInfo", CameraInfo, queue_size=10,latch=True)
+QPub.publish(cvb.cv2_to_imgmsg(intrin.Q))
 cameraPublisherLeft.publish(idealLeftCamera)
 cameraPublisherRight.publish(idealRightCamera)
 print("published intrinsic Info")
