@@ -14,7 +14,7 @@ cv::Rect lroi,rroi;
 cv::Mat lmapx,lmapy;
 cv::Mat rmapx,rmapy;
 
-;
+
 cv::Mat mainImage;
 cv::Mat leftImage,rightImage;
 cv::Mat leftROI,rightROI;

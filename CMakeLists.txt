@@ -108,6 +108,7 @@ add_service_files(
 	getOffset.srv
 	getQ.srv
 	getCameraInfo.srv
+	imageRectification.srv
 )
 
 ## Generate actions in the 'action' folder

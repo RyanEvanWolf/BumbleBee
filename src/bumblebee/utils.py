@@ -6,6 +6,12 @@ from geometry_msgs.msg import TransformStamped,Transform,Quaternion,Vector3
 import copy
 import pickle
 import math
+import os
+
+def createDir(newDir):
+    if(not os.path.exists(newDir)):
+        os.makedirs(newDir)
+
 def msgFromTransform(inHomography):
     outTransform=Transform()
     T=inHomography[0:3,3]

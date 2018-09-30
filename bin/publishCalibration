@@ -94,4 +94,29 @@ cameraPublisherLeft.publish(idealLeftCamera)
 cameraPublisherRight.publish(idealRightCamera)
 print("published intrinsic Info")
 ########publish Rectification Maps
+
+
+lmapixPub=rospy.Publisher(rospy.get_name()+"/idealLeft/intX",Image,queue_size=3,latch=True)
+lmapiyPub = rospy.Publisher(rospy.get_name() + "/idealLeft/intY", Image, queue_size=3, latch=True)
+lmapfxPub = rospy.Publisher(rospy.get_name() + "/idealLeft/floatX", Image, queue_size=3, latch=True)
+lmapfyPub = rospy.Publisher(rospy.get_name() + "/idealLeft/floatY", Image, queue_size=3, latch=True)
+
+rmapixPub=rospy.Publisher(rospy.get_name()+"/idealRight/intX",Image,queue_size=3,latch=True)
+rmapiyPub = rospy.Publisher(rospy.get_name() + "/idealRight/intY", Image, queue_size=3, latch=True)
+rmapfxPub = rospy.Publisher(rospy.get_name() + "/idealRight/floatX", Image, queue_size=3, latch=True)
+rmapfyPub = rospy.Publisher(rospy.get_name() + "/idealRight/floatY", Image, queue_size=3, latch=True)
+
+print(lMap.intXMapping.dtype)
+print(lMap.floatXMapping.dtype)
+
+lmapixPub.publish(cvb.cv2_to_imgmsg(lMap.intXMapping))
+lmapiyPub.publish(cvb.cv2_to_imgmsg(lMap.intYMapping))
+lmapfxPub.publish(cvb.cv2_to_imgmsg(lMap.floatXMapping))
+lmapfyPub.publish(cvb.cv2_to_imgmsg(lMap.floatYMapping))
+
+rmapixPub.publish(cvb.cv2_to_imgmsg(rMap.intXMapping))
+rmapiyPub.publish(cvb.cv2_to_imgmsg(rMap.intYMapping))
+rmapfxPub.publish(cvb.cv2_to_imgmsg(rMap.floatXMapping))
+rmapfyPub.publish(cvb.cv2_to_imgmsg(rMap.floatYMapping))
+print("published rectification Info")
 rospy.spin()
