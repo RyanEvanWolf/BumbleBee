@@ -1,3 +1,7 @@
 sensor_msgs/Image fullImage
 ---
-float64[] timeTaken
+sensor_msgs/Image lRectified
+sensor_msgs/Image rRectified
+float64 debayerTime
+float64 rectificationTime
+float64 intRectificationTime

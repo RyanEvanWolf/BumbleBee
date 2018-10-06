@@ -69,29 +69,47 @@ class stereoCamera:
         else:
             self.kSettings=getCameraSettingsFromServer(configurationTopic)
     def debayerImage(self,bumblebeeImage):
+        totalTime=0
         startTime=time.time()
         limage=copy.deepcopy(bumblebeeImage[self.kSettings["height"]:self.kSettings["height"]*2,0:self.kSettings["width"]])
+        startTime=time.time()
         limage=cv2.cvtColor(limage,cv2.COLOR_BAYER_BG2GRAY)
         diff=time.time()-startTime
+        totalTime+=diff
+        
         rimage=copy.deepcopy(bumblebeeImage[0:self.kSettings["height"],0:self.kSettings["width"]])
+        startTime=time.time()
         rimage=cv2.cvtColor(rimage,cv2.COLOR_BAYER_BG2GRAY)
-        return copy.deepcopy(limage),copy.deepcopy(rimage),diff
+        diff=time.time()-startTime
+        totalTime+=diff
+        return copy.deepcopy(limage),copy.deepcopy(rimage),totalTime
     def rectifyImage(self,leftImg,rightImg,floatingRect=True):
+        totalTime=0
         if(floatingRect):
             startTime=time.time()
             lr=copy.deepcopy(cv2.remap(leftImg,
                                 self.kSettings["lMapfx"],self.kSettings["lMapfy"],cv2.INTER_LINEAR))
             diff=time.time()-startTime
+            totalTime+=diff
+
+            startTime=time.time()
             rr=copy.deepcopy(cv2.remap(rightImg,
                                 self.kSettings["rMapfx"],self.kSettings["rMapfy"],cv2.INTER_LINEAR))
+            diff=time.time()-startTime
+            totalTime+=diff
         else:
             startTime=time.time()
             lr=copy.deepcopy(cv2.remap(leftImg,
                                 self.kSettings["lMapix"],self.kSettings["lMapiy"],cv2.INTER_LINEAR))
             diff=time.time()-startTime
+            totalTime+=diff
+
+            startTime=time.time()
             rr=copy.deepcopy(cv2.remap(rightImg,
                                 self.kSettings["rMapix"],self.kSettings["rMapiy"],cv2.INTER_LINEAR))
-        return  lr,rr,diff
+            diff=time.time()-startTime
+            totalTime+=diff
+        return  lr,rr,totalTime
     # def getROIimg(self,img):
     #     return copy.deepcopy(img[(self.kSettings["roi"][1]:(self.kSettings["roi"][1]+self.kSettings["roi"][2]),
     #                               (self.kSettings["roi"][0]+self.ROI[1][3]:(self.kSettings["roi"][1]+self.kSettings["roi"][2])  ]
