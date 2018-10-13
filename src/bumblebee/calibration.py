@@ -165,7 +165,7 @@ class StereoCameraInfo():
         self.intrin=StereoIntrinsicInfo()
     def calibrateFromFile(self,SingleCameraDirectory):
         self.inCalibrationData = pickle.load(open(SingleCameraDirectory, "rb"))
-        self.calibrationFlags=self.inCalibrationData.Lparam.calibrationFlags+cv2.CALIB_USE_INTRINSIC_GUESS + cv2.CALIB_SAME_FOCAL_LENGTH
+        self.calibrationFlags=self.inCalibrationData.Lparam.calibrationFlags|cv2.CALIB_USE_INTRINSIC_GUESS|cv2.CALIB_SAME_FOCAL_LENGTH
 
         (self.RMS,
          self.intrin.optimizedLeft.K,self.intrin.optimizedLeft.D,
@@ -176,15 +176,15 @@ class StereoCameraInfo():
                                                           self.inCalibrationData.Lparam.K,self.inCalibrationData.Lparam.D,
                                                           self.inCalibrationData.Rparam.K,self.inCalibrationData.Rparam.D,
                                                           self.inCalibrationData.meta.imgSize,flags=self.calibrationFlags,
-                                                          criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 1000, 0.1))
+                                                          criteria=(cv2.TERM_CRITERIA_EPS|cv2.TERM_CRITERIA_COUNT, 1000, 0.1))
         print(self.RMS)
         #print(cv2.stereoRectify.__doc__)
         (self.extrin.Rleft,self.extrin.Rright,
          self.intrin.Pl,self.intrin.Pr,self.intrin.Q,
          self.intrin.lROI,self.intrin.rROI)=cv2.stereoRectify(self.intrin.optimizedLeft.K,self.intrin.optimizedLeft.D,
                                                               self.intrin.optimizedRight.K,self.intrin.optimizedRight.D,
-                                                              self.inCalibrationData.meta.imgSize,self.extrin.R,self.extrin.T,
-                                                              alpha=-1)
+                                                              (self.inCalibrationData.meta.imgSize[1],self.inCalibrationData.meta.imgSize[0]),self.extrin.R,self.extrin.T,
+                                                              alpha=1)#-1
         print(self.intrin.lROI,self.intrin.rROI)
 
 
@@ -193,6 +193,11 @@ class StereoCameraInfo():
         #print(cv2.initUndistortRectifyMap.__doc__)
         flippedSize=(self.inCalibrationData.meta.imgSize[1],self.inCalibrationData.meta.imgSize[0])
         ###not sure why it needs to be flipped, but the mapping size is opposite to the image size
+        ####:::::FOUND OUT WHY NOW
+        ####so the image.shape....returns a NUMPY related shape, so (height,width)
+        ####The stereo and remapping functions expect the image size in a (Width,height) format,
+        ### the same as the Rect specification....Not sure why the single camera calibration size is not 
+        ###specified the same way (they use shape)....but apparently it seems to differ in those conventions
         self.lRect.floatXMapping,self.lRect.floatYMapping=cv2.initUndistortRectifyMap(self.intrin.optimizedLeft.K,
                                                                                       self.intrin.optimizedLeft.D,
                                                                                       self.extrin.Rleft,

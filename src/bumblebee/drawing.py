@@ -29,16 +29,14 @@ def drawCalibrationCoverageMap(rectImages,foundPoints):
 
 def drawStereoROI(epiImage,leftROI,rightROI):
     offsetX=int(epiImage.shape[1]/2)
-    print(offsetX)
     lCol=(0,0,255)
     rCol=lCol
-    leftCorner1=(leftROI[1],leftROI[0])#,lCol,3)
-    leftCorner2=(leftROI[1]+leftROI[3],leftROI[0]+leftROI[2])
-    print(leftCorner1)
-    rightCorner1=(rightROI[1]+offsetX,rightROI[0])#+offsetX)#,lCol,3)
-    rightCorner2=(rightROI[1]+rightROI[3]+offsetX,rightROI[0]+rightROI[2])#+offsetX)
-    print(rightCorner1)
-    print(rightCorner2)
+    leftCorner1=(leftROI[0],leftROI[1])#,lCol,3) 1,0
+    leftCorner2=(leftROI[0]+leftROI[2],leftROI[1]+leftROI[3])    #1,3,0,2
+
+    rightCorner1=(rightROI[0]+offsetX,rightROI[1])#+offsetX)#,lCol,3)    1 0
+    rightCorner2=(rightROI[0]+rightROI[2]+offsetX,rightROI[1]+rightROI[3])#+offsetX)   1 3 0 2
+
     cv2.rectangle(epiImage,leftCorner1,leftCorner2,
                 lCol,3)
     cv2.rectangle(epiImage,rightCorner1,rightCorner2,
@@ -46,12 +44,12 @@ def drawStereoROI(epiImage,leftROI,rightROI):
     overlapROI=getROIoverlap(leftROI,rightROI)
 
     overlapImage=copy.deepcopy(epiImage)
-    cv2.rectangle(overlapImage, (overlapROI[1],overlapROI[0]),
-                   (overlapROI[1]+overlapROI[3],overlapROI[0]+overlapROI[2]),(0,255,0),-1)
-    cv2.rectangle(overlapImage, (overlapROI[1]+offsetX,overlapROI[0]),
-                   (overlapROI[1]+overlapROI[3]+offsetX,overlapROI[0]+overlapROI[2]),(0,255,0),-1)
+    cv2.rectangle(overlapImage, (overlapROI[0],overlapROI[1]),
+                   (overlapROI[0]+overlapROI[2],overlapROI[1]+overlapROI[3]),(0,255,0),-1)
+    cv2.rectangle(overlapImage, (overlapROI[0]+offsetX,overlapROI[1]),
+                   (overlapROI[0]+overlapROI[2]+offsetX,overlapROI[1]+overlapROI[3]),(0,255,0),-1)
     epiImage=copy.deepcopy(cv2.addWeighted(epiImage, 0.7, overlapImage, 0.2, 0))
-    return epiImage
+    return copy.deepcopy(epiImage)
 
 def plotErrorHist(rmsError,xlabel,ylabel="Total Images",bins=25,displayPDF=True):
     fig, ax1 = plt.subplots()
@@ -66,6 +64,7 @@ def plotErrorHist(rmsError,xlabel,ylabel="Total Images",bins=25,displayPDF=True)
         ax2.plot(x_pdf,y_pdf,color='r',linestyle='dashed')
         ax2.set_ylabel('Probability Density Function')
     return fig,ax1
+
 
 # s2 = np.sin(2 * np.pi * t)
 # ax2.plot(t, s2, 'r.')

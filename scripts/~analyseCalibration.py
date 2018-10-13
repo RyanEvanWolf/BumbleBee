@@ -142,7 +142,7 @@ cv2.line(Coverage, (int(Coverage.shape[1]/2.0),0),
 cv2.imshow("coverage",Coverage)
 
 cv2.imwrite(calibrationDirectory+"/Coverage.png",Coverage)
-cv2.waitKey(1000)
+cv2.waitKey(0)
 
 leftImagesAvgRms=[]
 rightImagesAvgRms=[]

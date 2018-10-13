@@ -107,6 +107,7 @@ for fileName in calibrationData.inCalibrationData.imgName:
         RMSimage=np.sqrt(RMSimage/len(lCorners))
         epiError.append(RMSimage)
         cv2.imwrite(outFolder+"/"+fileName,Combined)
+        print(outFolder+"/"+fileName)
     else:
         print("NO CHECKER")
     # outshow=copy.deepcopy(leftRectified[-1])

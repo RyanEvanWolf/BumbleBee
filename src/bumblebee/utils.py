@@ -25,6 +25,14 @@ def msgFromTransform(inHomography):
     outTransform.rotation.w=q[3]
     return outTransform 
 
+def np2cvDisplay(npIn):
+    return (int(npIn[0,0]),int(npIn[1,0]))
+def rmsError(xPred,X):
+    return np.sqrt(((xPred-X)**2).mean())
+
+def sumSquareError(xPred,X):
+    return np.sqrt(((xPred-X)**2).sum())
+
 def composeR(roll,pitch,yaw,degrees=True,dict=True):
     if(degrees):
         q=quaternion_from_euler(radians(roll),
