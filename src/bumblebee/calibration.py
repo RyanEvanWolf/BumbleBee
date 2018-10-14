@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 
 import pickle
 
-from bumblebee.utils import createHomog,msgFromTransform
+from bumblebee.motion import createHomog
+from bumblebee.messaging import msgFromTransform
 
 
 

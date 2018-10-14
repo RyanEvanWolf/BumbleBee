@@ -7,6 +7,8 @@ import matplotlib.mlab as mlab
 from scipy.stats import norm
 import random
 from bumblebee.calibration import getROIoverlap
+from bumblebee.baseTypes import *
+from bumblebee.utils import *
 
 def drawEpiPolarLines(inImage,percentage=0.1):
     nLines=int(inImage.shape[0]*percentage)
@@ -27,6 +29,13 @@ def drawCalibrationCoverageMap(rectImages,foundPoints):
             cv2.line(outputImage,pt1,pt2,(20,80,0,0.1))
     return outputImage
 
+   
+def drawROI(inImage,roi):
+    lCol=(0,0,255)
+    leftCorner1=(roi[0],roi[1])#,lCol,3) 1,0
+    leftCorner2=(roi[0]+roi[2],roi[1]+roi[3])    #1,3,0,2
+    cv2.rectangle(inImage,leftCorner1,leftCorner2,
+                lCol,3)
 def drawStereoROI(epiImage,leftROI,rightROI):
     offsetX=int(epiImage.shape[1]/2)
     lCol=(0,0,255)
@@ -65,7 +74,38 @@ def plotErrorHist(rmsError,xlabel,ylabel="Total Images",bins=25,displayPDF=True)
         ax2.set_ylabel('Probability Density Function')
     return fig,ax1
 
+def plotTracks(inImage,Track1,Track2,col1=(0,255,0),col2=(0,0,255)):
+    for i in range(0,len(Track1)):
+        cv2.line(inImage,np2cvDisplay(Track1[i]),
+                        np2cvDisplay(Track2[i]),(0,0,0))
+        cv2.circle(inImage,np2cvDisplay(Track1[i]),2,col1,-1)    
+        cv2.circle(inImage,np2cvDisplay(Track2[i]),2,col2,-1) 
+        #cv2.circle(inImage,np2cvDisplay(Track2[i]),col2,-1) 
 
+# def plotInterFrameTracks(inImage,interFrame):
+#     for tracks in setTrackEdges:
+#         Lines=[]
+#         for match in tracks.tracks:
+#             cv2.circle(inImage,np2cvDisplay(match.L),1,(0,20,255,0.1),-1)
+#             Lines.append(np2cvDisplay(match.L))
+#         for j in range(1,len(Lines)):
+#             cv2.line(inImage,Lines[j-1],Lines[j],(20,80,0,0.1))      
+                
+
+# def drawTracks(inImage,setTrackEdges):
+#     for tracks in setTrackEdges:
+#         Lines=[]
+#         for match in tracks.tracks:
+#             cv2.circle(inImage,np2cvDisplay(match.L),1,(0,20,255,0.1),-1)
+#             Lines.append(np2cvDisplay(match.L))
+#         for j in range(1,len(Lines)):
+#             cv2.line(inImage,Lines[j-1],Lines[j],(20,80,0,0.1))      
+#             #cv2.circle(inImage,np2cvDisplay(match.L),1,(255,20,0,0.1),-1)
+        #       cv2.circle(outputImage,(int(PointIndex[0,0]),int(PointIndex[0,1])),3,(80,20,0,0.1),-1)###column , row
+        # for PointIndex in range(0,len(checkerBoardIndex)-1):
+        #     pt1=(int(checkerBoardIndex[PointIndex+1][0,0]),int(checkerBoardIndex[PointIndex+1][0,1]))
+        #     pt2=(int(checkerBoardIndex[PointIndex][0,0]),int(checkerBoardIndex[PointIndex][0,1]))
+        #     cv2.line(outputImage,pt1,pt2,(20,80,0,0.1))      
 # s2 = np.sin(2 * np.pi * t)
 # ax2.plot(t, s2, 'r.')
 # ax2.set_ylabel('sin', color='r')

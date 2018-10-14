@@ -73,17 +73,7 @@ def checkWithinROI(pt,roi):
             return False
     else:
         return False
-def getSimulatedLandmarkSettings():
-    Settings={}
-    Settings["Xdepth"]=5.0
-    Settings["Ydepth"]=5.0
-    Settings["Zdepth"]=4.0
-    Settings["HeightMaximum"]=0.5
-    Settings["MinimumOutlier"]=4.0 #pixels
-    Settings["OutlierLevels"]=[0.05,0.1,0.15,0.2,0.25]
-    Settings["GaussianNoise"]=[0.25,0.5,0.75,1.0,1.5,2,2.5]
-    Settings["operatingCurves"]=[0.3,0.5,0.7,0.9,1.0]
-    return Settings
+
 
 def validateLandmark(data,Pl,Pr,roi,maxHeight,homography=np.eye(4)):
     ############
@@ -128,7 +118,7 @@ def genRandomGaussian(lPixel,rPixel,kSettings,noisePixels):
     xNoise/=xNoise[3,0]
     return xNoise,leftNoise,rightNoise  
 
-def genRandomSimulationPoint(kSettings,landmarkSettings,debug=False):
+def genRandomSimulationPoint(kSettings,landmarkSettings,H=np.eye(4)):
     validPoint=False
     Data={}
     Data["Noise"]={}
@@ -192,8 +182,85 @@ def genRandomSimulationPoint(kSettings,landmarkSettings,debug=False):
             Data["Outlier"]["R"]=r
     return Data
 
+class Landmark:
+    def __init__(self):
+        self.edges=[]
+
+# class motionEdge:
+#     def __init__(self):
+#         self.angles=None
+#         self.Tc=None
+#         self.R=None
+#         self.H=None
+#         self.Htransform=None
+#     def initH(self,H):
+#         self.H=copy.deepcopy(H)
+#         self.R=copy.deepcopy(H[0:3,0:3])
+#         tmpAngles=copy.deepcopy(euler_from_matrix(H[0:3,0:3],'szxy'))
+#         self.angles=np.zeros((1,3))
+#         self.angles[0,0]=degrees(tmpAngles[0])
+#         self.angles[0,1]=degrees(tmpAngles[1])
+#         self.angles[0,2]=degrees(tmpAngles[2])
+
+#         self.Tc=np.zeros((3,1))
+#         self.Tc[0,0]=self.H[0,3]
+#         self.Tc[1,0]=self.H[1,3]
+#         self.Tc[2,0]=self.H[2,3]
+#         self.Htransform=composeTransform(self.R,self.Tc)
+#     def initData(self,angles=np.zeros((1,3)),coords=np.zeros((3,1))):
+#         self.angles=copy.deepcopy(angles) ###in degrees
+#         self.Tc=copy.deepcopy(coords)  ###in meters
+#         self.R=composeR(self.angles[0,0],self.angles[0,1],self.angles[0,2])##assume degrees
+#         self.H=createHomog(self.R,self.Tc)
+#         self.Htransform=composeTransform(self.R,self.Tc)
+#     def getMotion(self):
+#         dictionary={}
+#         return dictionary
+  
+
+
+# def getMotion(H):
+# Result={}
+# angles=copy.deepcopy(euler_from_matrix(H[0:3,0:3],'szxy'))
+# Result["Roll"]=57.2958*angles[0]
+# Result["Pitch"]=57.2958*angles[1]
+# Result["Yaw"]=57.2958*angles[2]
+
+# Result["X"]=copy.deepcopy(H[0,3])
+# Result["Y"]=copy.deepcopy(H[1,3])
+# Result["Z"]=copy.deepcopy(H[2,3])
+# return Result
+        #self.H=copy.deepcopy(H)
+#         simulationData["R"]=noisyRotations(mSettings[m]["RotationNoise"])
+#         simulationData["Tc"]=dominantTranslation(mSettings[m]["TranslationMean"],mSettings[m]["TranslationNoise"])
+#         simulationData["H"]=createHomog(simulationData["R"]["matrix"],
+#                                         simulationData["Tc"]["vector"])
+#         simulationData["Htransform"]=composeTransform(simulationData["R"]["matrix"],
+#                                         simulationData["Tc"]["vector"])
+
+class stereoLandmark:
+    def __init__(self,X,L,R):
+        self.X=None     ####np x,y,z,w
+        self.L=None     ###np, x,y,w
+        self.R=None     ###np,x,y,w
+        ####always includes offset in point, no ROI
+    def getTriangulateError(self,useQ=False):
+        pass
+    def getReprojectError(self,Pl,Pr):
+        pass
+
+
+class stereoFrame:
+    def __init__(self):
+        self.landmarks=[]   ###
+
+class stereoWindow:
+    def __init__(self):
+        self.stereoFrames=[]  ####oldest - > newest (FIFO)
+
 class simulationFrame:
     def __init__(self):
+        self.H=None
         self.landmarks=[]
     def getLeftPoints(self):
         pass
@@ -242,83 +309,106 @@ class stereoCamera:
             self.kSettings=getCameraSettingsFromServer(configurationTopic)
     def simulateFrame(self,simSettings,nPoints=10):
         outFrame=simulationFrame()
+        outFrame.H=np.eye(4)
         for pointID in range(0,nPoints):
             outFrame.landmarks.append(genRandomSimulationPoint(self.kSettings,simSettings))
         return outFrame
-    def simulatePoint(self,simSettings):
-        genRandomSimulationPoint(self.kSettings,simSettings)
-        return genRandomSimulationPoint(self.kSettings,simSettings)
-        # print(genRandomSimulationPoint(self.kSettings,simSettings))
-
-#             ##transform to second coordinate system
-#             self.Data["Xb"]=np.dot(Ha2b,self.Data["Xa"])
-#             self.Data["Xb"]=self.Data["Xb"]/self.Data["Xb"][3,0]
-#             self.Data["Lb"]=CameraConfig["Pl"].dot(self.Data["Xb"])
-#             self.Data["Lb"]=self.Data["Lb"]/self.Data["Lb"][2,0]
-#             self.Data["Rb"]=CameraConfig["Pr"].dot(self.Data["Xb"])
-#             self.Data["Rb"]=self.Data["Rb"]/self.Data["Rb"][2,0]   
-#             if(checkValidSimulatedPoint(self.Data,CameraConfig["roi_width"],
-#                                         CameraConfig["roi_height"],
-#                                         landmarkSettings["HeightMinimum"])):
-#                 validPoint=True
-#                 #####
-#                 ###create gaussian noise simulations
-#                 self.Noise=[]
-#                 for i in landmarkSettings["GaussianNoise"]:
-#                     validNoise=False
-#                     while(not validNoise):
-#                         noisyData=copy.deepcopy(self.Data)
-#                         noisyData["La"][0,0]+=np.random.normal(0,i,1)
-#                         noisyData["La"][1,0]+=np.random.uniform()
-#                         noisyData["Ra"][0,0]+=np.random.normal(0,i,1)
-#                         noisyData["Ra"][1,0]+=np.random.uniform()
-#                         ##re triangulate
-#                         noisyData["Xa"]=cv2.triangulatePoints(CameraConfig["Pl"],CameraConfig["Pr"],
-#                                                                 (noisyData["La"][0,0],noisyData["La"][1,0]),
-#                                                                 (noisyData["Ra"][0,0],noisyData["Ra"][1,0]))
-#                         noisyData["Xa"]/=noisyData["Xa"][3,0]
-#                         noisyData["Lb"][0,0]+=np.random.normal(0,i,1)
-#                         noisyData["Lb"][1,0]+=np.random.uniform()
-#                         noisyData["Rb"][0,0]+=np.random.normal(0,i,1)
-#                         noisyData["Rb"][1,0]+=np.random.uniform()
-#                         #re triangulate
-#                         noisyData["Xb"]=cv2.triangulatePoints(CameraConfig["Pl"],CameraConfig["Pr"],
-#                                         (noisyData["Lb"][0,0],noisyData["Lb"][1,0]),
-#                                         (noisyData["Rb"][0,0],noisyData["Rb"][1,0]))
-#                         noisyData["Xb"]/=noisyData["Xb"][3,0]
-#                         if(checkValidSimulatedPoint(noisyData,CameraConfig["roi_width"],
-#                                         CameraConfig["roi_height"],
-#                                         landmarkSettings["HeightMinimum"])):
-#                                 validNoise=True
-#                                 self.Noise.append(noisyData)
-#                 validOutlier=False
-#                 self.Outlier=copy.deepcopy(self.Data)
-#                 while(not validOutlier):
-#                     x=np.random.uniform(0.0,CameraConfig["roi_width"])
-#                     y=np.random.uniform(0.0,CameraConfig["roi_height"])
-#                     pts=np.ones((3,1),dtype=np.float64)
-#                     pts[0,0]=x
-#                     pts[1,0]=y 
-#                     diff=abs(self.Data["La"]-pts) 
-#                     if((diff[0,0]>landmarkSettings["MinimumOutlier"])
-#                         and(diff[1,0]>landmarkSettings["MinimumOutlier"])):
-#                         validOutlier=True
-#                         self.Outlier["La"]=pts
-#                         self.Outlier["Ra"]=np.random.uniform(0.0,CameraConfig["roi_width"])
-#                 validOutlier=False
-#                 while(not validOutlier):
-#                     x=np.random.uniform(0.0,CameraConfig["roi_width"])
-#                     y=np.random.uniform(0.0,CameraConfig["roi_height"])
-#                     pts=np.ones((3,1),dtype=np.float64)
-#                     pts[0,0]=x
-#                     pts[1,0]=y 
-#                     diff=abs(self.Data["Lb"]-pts) 
-#                     if((diff[0,0]>landmarkSettings["MinimumOutlier"])
-#                         and(diff[1,0]>landmarkSettings["MinimumOutlier"])):
-#                         validOutlier=True
-#                         self.Outlier["Lb"]=pts
-#                         self.Outlier["Rb"]=np.random.uniform(0.0,CameraConfig["roi_width"])  
-
+    def checkWithinROI(self,pt):
+        return checkWithinROI(pt,self.kSettings["roi"])
+    def simulateMotionFrame(self,simSettings,H,nPoints=10):
+        #####Gen normal landmark
+        outFrame=simulationFrame()
+        for pointIndex in range(0,nPoints):
+            validSimulation=False
+            while(not validSimulation):
+                landmarkA=genRandomSimulationPoint(self.kSettings,simSettings)
+                validTransform,l,r=validateLandmark(landmarkA["Ideal"]["X"],
+                                    self.kSettings["Pl"],
+                                    self.kSettings["Pr"],
+                                    self.kSettings["roi"],
+                                    simSettings["HeightMaximum"],H)
+                if(validTransform):
+                    reproject1=self.reproject(l,r)
+                    rp2=self.reproject2(l,r)
+                    x1=rmsError(np.linalg.inv(H).dot(reproject1),landmarkA["Ideal"]["X"])
+                    x2=rmsError(np.linalg.inv(H).dot(rp2),landmarkA["Ideal"]["X"])
+                    print(np.transpose(x1),np.transpose(x2))
+                    print(np.transpose(np.linalg.inv(H).dot(reproject1)),
+                          np.transpose(np.linalg.inv(H).dot(rp2)),
+                            np.transpose(landmarkA["Ideal"]["X"]))
+                    print("---")
+                    validSimulation=True
+                    outFrame.landmarks.append(landmarkA)
+        return outFrame
+# def genRandomSimulationPoint(kSettings,landmarkSettings,debug=False):
+#     validPoint=False
+#     Data={}
+#     Data["Noise"]={}
+#     Data["Ideal"]={}
+#     while(not validPoint):
+#         Point=genRandomCoordinate(landmarkSettings["Xdepth"],
+#                                     landmarkSettings["Ydepth"],
+#                                     landmarkSettings["Zdepth"])
+#         validPoint,l,r=validateLandmark(Point,
+#                                     kSettings["Pl"],
+#                                     kSettings["Pr"],
+#                                     kSettings["roi"],
+#                                     landmarkSettings["HeightMaximum"])
+#         Data["Ideal"]["X"]=Point
+#         Data["Ideal"]["L"]=l
+#         Data["Ideal"]["R"]=r
+#     Data["Ideal"]["Xpred"]=cv2.triangulatePoints(kSettings["Pl"],
+#                             kSettings["Pr"],
+#                             (l[0,0],l[1,0]),
+#                             (r[0,0],r[1,0]))
+#     Data["Ideal"]["Xpred"]/=Data["Ideal"]["Xpred"][3,0]
+#     Data["Ideal"]["XPredRMS"]=np.linalg.norm(Point-Data["Ideal"]["Xpred"])
+#     #########
+#     ##gen noisy data
+#     for noise in landmarkSettings["GaussianNoise"]:
+#         validNoise=False
+#         NoiseData={}
+#         while(not validNoise):
+#             xtest,ltest,rtest=genRandomGaussian(Data["Ideal"]["L"],Data["Ideal"]["R"],kSettings,noise)
+#             validNoise,l,r=validateLandmark(xtest,
+#                                     kSettings["Pl"],
+#                                     kSettings["Pr"],
+#                                     kSettings["roi"],
+#                                     landmarkSettings["HeightMaximum"])
+#             NoiseData["X"]=xtest
+#             NoiseData["L"]=l
+#             NoiseData["R"]=r
+#             NoiseData["Linitial"]=ltest
+#             NoiseData["Rinitial"]=rtest
+#         name=str(noise).replace(".","_")
+#         Data["Noise"][name]=NoiseData
+#     #########
+#     ##gen outlier value
+#     ########
+#     validOutlier=False
+#     while(not validOutlier):
+#         Point=genRandomCoordinate(landmarkSettings["Xdepth"],
+#                                     landmarkSettings["Ydepth"],
+#                                     landmarkSettings["Zdepth"])
+#         inROI,l,r=validateLandmark(Point,
+#                                     kSettings["Pl"],
+#                                     kSettings["Pr"],
+#                                     kSettings["roi"],
+#                                     landmarkSettings["HeightMaximum"])
+#         if(inROI and (sumSquareError(l,Data["Ideal"]["L"])>=landmarkSettings["MinimumOutlier"])
+#             and(sumSquareError(r,Data["Ideal"]["R"])>=landmarkSettings["MinimumOutlier"])):
+#             validOutlier=True
+#             Data["Outlier"]={}
+#             Data["Outlier"]["X"]=Point
+#             Data["Outlier"]["L"]=l
+#             Data["Outlier"]["R"]=r
+#     return Data            
+        #####transform it
+        #####   check it still fits in ROI
+        #####DO this N times
+        ####draw the simulated images
+        ####return the data.
+        pass
     def predictPoint(self,Xworld):
         leftPixel=self.kSettings["Pl"].dot(Xworld)
         leftPixel/=leftPixel[2,0]

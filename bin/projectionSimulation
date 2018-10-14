@@ -13,29 +13,39 @@ import argparse
 from bumblebee.stereo import *
 from bumblebee.drawing import *
 
+#########
+##just a simple test to validate our projective model is working
+##-we declare a stereo camera that subscribes to some calibration setting.
+## we then simulate  astereo frame, this generates points within the region of interest,
+## 
 
+# rospy.init_node("bumblebee_projection_simulation")
+# bumblebee=stereoCamera()
+# for a in range(0,2):
 
-rospy.init_node("bumblebee_projection_simulation")
-bumblebee=stereoCamera()
-for a in range(0,2):
+#     limage=255*np.ones((bumblebee.kSettings["height"],
+#                         bumblebee.kSettings["width"])
+#                         ,dtype=np.uint8)
+#     rimage=255*np.ones((bumblebee.kSettings["height"],
+#                         bumblebee.kSettings["width"])
+#                         ,dtype=np.uint8)
 
-    limage=255*np.ones((bumblebee.kSettings["height"],
-                        bumblebee.kSettings["width"])
-                        ,dtype=np.uint8)
-    rimage=255*np.ones((bumblebee.kSettings["height"],
-                        bumblebee.kSettings["width"])
-                        ,dtype=np.uint8)
+#     testData=bumblebee.simulateFrame(getSimulatedLandmarkSettings(),10)
 
-    testData=bumblebee.simulateFrame(getSimulatedLandmarkSettings(),300)
-
-    for j in testData.landmarks:
-        lPr,rPr=bumblebee.predictPoint(j["Ideal"]["X"])
-        Pred=np.vstack((lPr,rPr))
-        orig=np.vstack((j["Ideal"]["L"],j["Ideal"]["R"]))
-        pnt=rmsError(Pred,orig)
-        print(pnt)
-    im=testData.drawEpiMatches(bumblebee.kSettings["width"],
-                                bumblebee.kSettings["height"],
-                                bumblebee.kSettings["roi"])
-    cv2.imshow("a",im)
-    cv2.waitKey(0)
+#     for j in testData.landmarks:
+#         lPr,rPr=bumblebee.predictPoint(j["Ideal"]["X"])
+#         xV1=bumblebee.reproject(lPr,rPr)
+#         xV2=bumblebee.reproject(lPr,rPr)
+#         Pred=np.vstack((lPr,rPr))
+#         orig=np.vstack((j["Ideal"]["L"],j["Ideal"]["R"]))
+#         pnt=rmsError(Pred,orig)
+#         print(j["Ideal"]["X"])
+#         print(xV1)
+#         print(xV2)
+#         print(pnt)
+#         print("----")
+#     im=testData.drawEpiMatches(bumblebee.kSettings["width"],
+#                                 bumblebee.kSettings["height"],
+#                                 bumblebee.kSettings["roi"])
+#     cv2.imshow("a",im)
+#     cv2.waitKey(0)
