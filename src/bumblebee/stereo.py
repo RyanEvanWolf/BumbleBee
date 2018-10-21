@@ -41,7 +41,7 @@ def getCameraSettingsFromServer(serverNodeName="/bumblebee_configuration"):
     cameraSettings["roi_height"]=cameraSettings["lInfo"].roi.height
     cameraSettings["roi_x"]=cameraSettings["lInfo"].roi.x_offset
     cameraSettings["roi_y"]=cameraSettings["lInfo"].roi.y_offset
-    cameraSettings["roi"]=[cameraSettings["roi_x"],cameraSettings["roi_y"],cameraSettings["roi_height"],cameraSettings["roi_width"]]
+    cameraSettings["roi"]=[cameraSettings["roi_x"],cameraSettings["roi_y"],cameraSettings["roi_width"],cameraSettings["roi_height"]]
 
     cameraSettings["width"]=cameraSettings["lInfo"].width
     cameraSettings["height"]=cameraSettings["lInfo"].height

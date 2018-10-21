@@ -65,10 +65,10 @@ cv2.imwrite(args.CalibrationDirectory+"/configROI.ppm",ROIimage)
 pubROIimage=rospy.Publisher(rospy.get_name()+"/roiImage",Image,queue_size=3,latch=True)
 pubROIimage.publish(cvb.cv2_to_imgmsg(ROIimage))
 
-idealLeftCamera.roi.x_offset=overlapROI[1]
-idealLeftCamera.roi.y_offset=overlapROI[0]
-idealLeftCamera.roi.height=overlapROI[2]
-idealLeftCamera.roi.width=overlapROI[3]
+idealLeftCamera.roi.x_offset=overlapROI[0]
+idealLeftCamera.roi.y_offset=overlapROI[1]
+idealLeftCamera.roi.height=overlapROI[3]
+idealLeftCamera.roi.width=overlapROI[2]
 
 idealRightCamera=CameraInfo()
 idealRightCamera.height=stereoCalibration.inCalibrationData.meta.imgSize[0]
@@ -81,10 +81,10 @@ idealRightCamera.R=np.identity(3,np.float64).flatten()
 idealRightCamera.P=intrin.Pr.flatten()
 idealRightCamera.header.frame_id=args.rightTopicPrefix
 
-idealRightCamera.roi.x_offset=overlapROI[1]
-idealRightCamera.roi.y_offset=overlapROI[0]
-idealRightCamera.roi.height=overlapROI[2]
-idealRightCamera.roi.width=overlapROI[3]
+idealRightCamera.roi.x_offset=overlapROI[0]
+idealRightCamera.roi.y_offset=overlapROI[1]
+idealRightCamera.roi.height=overlapROI[3]
+idealRightCamera.roi.width=overlapROI[2]
 QPub=rospy.Publisher(rospy.get_name()+"/Q",Image,queue_size=3,latch=True)
 
 cameraPublisherLeft=rospy.Publisher(rospy.get_name()+"/"+args.leftTopicPrefix+"/CameraInfo",CameraInfo,queue_size=10,latch=True)

@@ -127,7 +127,7 @@ f2,ax2=plotErrorHist(epiError,"Average Epipolar Error")
 
 print(intrin.lROI)
 print(intrin.rROI)
-
+print("overlap",getROIoverlap(intrin.lROI,intrin.rROI))
 overlapROI=getROIoverlap(intrin.lROI,intrin.rROI)
 perc=100*(overlapROI[2]*overlapROI[3]/float(calibrationData.inCalibrationData.meta.imgSize[0]*
                                      calibrationData.inCalibrationData.meta.imgSize[1]))

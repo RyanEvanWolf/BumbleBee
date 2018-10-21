@@ -51,6 +51,11 @@ Analyse the stereo calibration results
 
 rosrun bumblebee analyseCalibration.py /home/ryan/currentTesting/stereoOut
 
+rosrun slam_analysis latexCalFig
+
+--------
+--slam_analysis package makes nice graphs for the analysis results and saves to home folder
+
 
  
 

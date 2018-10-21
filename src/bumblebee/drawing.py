@@ -74,6 +74,34 @@ def plotErrorHist(rmsError,xlabel,ylabel="Total Images",bins=25,displayPDF=True)
         ax2.set_ylabel('Probability Density Function')
     return fig,ax1
 
+def multipleErrorHist(rmsErrorList,colourList,keylist,xlabel,ylabel="Total Images",bins=25):
+    fig, ax1 = plt.subplots()
+    ax2=ax1.twinx()
+    ax2.grid(False)
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel)
+    ax2.set_ylabel('Probability Density Function')
+    for histIndex in range(0,len(rmsErrorList)):
+        ax1.hist(rmsErrorList[histIndex],bins,edgecolor=(0,0,0),color=colourList[histIndex],label=keylist[histIndex],alpha=0.3)
+        mu,sigma = norm.fit(rmsErrorList[histIndex])
+        x_pdf = np.linspace(0,np.max(rmsErrorList[histIndex]), 100)
+        y_pdf=norm.pdf(x_pdf, mu, sigma)
+        ax2.plot(x_pdf,y_pdf,color=colourList[histIndex],linestyle='dashed')
+    ax1.legend(loc="upper right")
+
+    fig.savefig("/home/ryan/"+xlabel+".png",format='png',dpi=200)
+    return fig,ax1,ax2
+#     fig, ax1 = plt.subplots()
+# y, x, _ =ax1.hist(rmsError,bins)
+# ax1.set_xlabel(xlabel)
+# ax1.set_ylabel(ylabel)
+# if(displayPDF):
+#     ax2=ax1.twinx()
+#     mu,sigma = norm.fit(rmsError)
+#     x_pdf = np.linspace(0,np.max(rmsError), 100)
+#     y_pdf=norm.pdf(x_pdf, mu, sigma)
+#     ax2.plot(x_pdf,y_pdf,color='r',linestyle='dashed')
+#     ax2.set_ylabel('Probability Density Function')
 def plotTracks(inImage,Track1,Track2,col1=(0,255,0),col2=(0,0,255)):
     for i in range(0,len(Track1)):
         cv2.line(inImage,np2cvDisplay(Track1[i]),
@@ -82,6 +110,25 @@ def plotTracks(inImage,Track1,Track2,col1=(0,255,0),col2=(0,0,255)):
         cv2.circle(inImage,np2cvDisplay(Track2[i]),2,col2,-1) 
         #cv2.circle(inImage,np2cvDisplay(Track2[i]),col2,-1) 
 
+def plotEpiPolar(inImage,leftTracks,rightTracks,col1=(100,100,255),col2=(255,0,255)):
+    offset=inImage.shape[1]/2
+    cv2.line(inImage,(offset,0),(offset,inImage.shape[0]),(0,0,0))
+    for trackN in range(0,len(leftTracks)):
+        cv2.circle(inImage,np2cvDisplay(leftTracks[trackN]),2,col1,-1)
+        withoffset=np2cvDisplay(rightTracks[trackN])
+        withoffset=(withoffset[0]+offset,withoffset[1])
+        cv2.circle(inImage,withoffset,2,col2,-1)
+        cv2.line(inImage,np2cvDisplay(leftTracks[trackN]),withoffset,(0,0,0))
+        # line=np2cvDisplay(ltrack)
+        # line=(offset,line[1])
+    #     # cv2.line(inImage,np2cvDisplay(ltrack),line,(0,0,0))
+    # for rtrack in rightTracks:
+        
+    #     withoffset=np2cvDisplay(rtrack)
+    #     withoffset=(withoffset[0]+offset,withoffset[1])
+    #     line=(offset,withoffset[1])
+    #     cv2.circle(inImage,withoffset,2,col2,-1)
+    #     cv2.line(inImage,withoffset,line,(0,0,0))
 # def plotInterFrameTracks(inImage,interFrame):
 #     for tracks in setTrackEdges:
 #         Lines=[]

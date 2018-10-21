@@ -5,7 +5,7 @@ import rosbag
 import time
 import cv2
 import copy
-from scipy.optimize import least_squares
+
 import decimal
 
 def composeR(roll,pitch,yaw,degrees=True):

@@ -67,33 +67,46 @@ class interFrameEdge:
         for a in self.currentEdges:
             result.append(a.R)
         return result     
-class motionEdge:
-    def __init__(self):
-        self.angles=None
-        self.Tc=None
-        self.R=None
-        self.H=None
-        self.Htransform=None
-    def initH(self,H):
-        self.H=copy.deepcopy(H)
-        self.R=copy.deepcopy(H[0:3,0:3])
-        tmpAngles=copy.deepcopy(euler_from_matrix(H[0:3,0:3],'szxy'))
-        self.angles=np.zeros((1,3))
-        self.angles[0,0]=degrees(tmpAngles[0])
-        self.angles[0,1]=degrees(tmpAngles[1])
-        self.angles[0,2]=degrees(tmpAngles[2])
 
-        self.Tc=np.zeros((3,1))
-        self.Tc[0,0]=self.H[0,3]
-        self.Tc[1,0]=self.H[1,3]
-        self.Tc[2,0]=self.H[2,3]
-        self.Htransform=composeTransform(self.R,self.Tc)
-    def initData(self,angles=np.zeros((1,3)),coords=np.zeros((3,1))):
-        self.angles=copy.deepcopy(angles) ###in degrees
-        self.Tc=copy.deepcopy(coords)  ###in meters
-        self.R=composeR(self.angles[0,0],self.angles[0,1],self.angles[0,2])##assume degrees
-        self.H=createHomog(self.R,self.Tc)
-        self.Htransform=composeTransform(self.R,self.Tc)
-    def getMotion(self):
-        dictionary={}
-        return dictionary
+
+# class motionEdge:
+#     def __init__(self,H):
+#         self.H=copy.deepcopy(H)
+#         self.angles=None
+#         self.Tc=None
+#         self.R=None
+#         self.H=None
+#         self.Htransform=None
+#     def getR(self):
+#         return copy.deepcopy(self.H[0:3,0:3])
+#     def getT(self):
+#         return copy.deepcopy(self)
+#     def getCoordinateTransform(self):
+#         return composeTransform()
+#     def invert(self,H=None):
+#         if(H==None):
+#             self.H=np.linalg.inv(self.H.dot(H)
+
+#     def initH(self,H):
+#         self.H=copy.deepcopy(H)
+#         self.R=copy.deepcopy(H[0:3,0:3])
+#         tmpAngles=copy.deepcopy(euler_from_matrix(H[0:3,0:3],'szxy'))
+#         self.angles=np.zeros((1,3))
+#         self.angles[0,0]=degrees(tmpAngles[0])
+#         self.angles[0,1]=degrees(tmpAngles[1])
+#         self.angles[0,2]=degrees(tmpAngles[2])
+
+#         self.Tc=np.zeros((3,1))
+#         self.Tc[0,0]=self.H[0,3]
+#         self.Tc[1,0]=self.H[1,3]
+#         self.Tc[2,0]=self.H[2,3]
+#         self.Htransform=composeTransform(self.R,self.Tc)
+#     def initData(self,angles=np.zeros((1,3)),coords=np.zeros((3,1))):
+#         self.angles=copy.deepcopy(angles) ###in degrees
+#         self.Tc=copy.deepcopy(coords)  ###in meters
+#         self.R=composeR(self.angles[0,0],self.angles[0,1],self.angles[0,2])##assume degrees
+#         self.H=createHomog(self.R,self.Tc)
+#         self.Htransform=composeTransform(self.R,self.Tc)
+#     def getMotion(self):
+#         dictionary={}
+#         return dictionary
