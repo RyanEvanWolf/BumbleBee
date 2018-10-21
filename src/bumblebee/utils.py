@@ -62,7 +62,7 @@ def sumSquareError(xPred,X):
 
 #     Result["X"]=copy.deepcopy(H[0,3])
 #     Result["Y"]=copy.deepcopy(H[1,3])
-#     Result["Z"]=copy.deepcopy(H[2,3])
+#     Result["Z"]=copy.deepcopy(H[2,3])u
 #     return Result
 
 def getPickledObject(fileName):
