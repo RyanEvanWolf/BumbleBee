@@ -18,35 +18,22 @@ import pickle
 from bumblebee.motion import createHomog
 from bumblebee.messaging import msgFromTransform
 
-
-
-
-
-def drawROI(leftROI,rightROI,overlapROI,imgSize=(1024,768)):
-    cameraImage=np.zeros((imgSize[1],imgSize[0],3), np.int8)
-    overlapImage=np.zeros((imgSize[1],imgSize[0],3), np.int8)
-
-    cv2.rectangle(cameraImage, (leftROI[1],leftROI[0]),
-                   (leftROI[1]+leftROI[3],leftROI[0]+leftROI[2]),(0,0,255),10)
-    cv2.rectangle(cameraImage, (rightROI[1],rightROI[0]),
-                   (rightROI[1]+rightROI[3],rightROI[0]+rightROI[2]),(255,0,0),10)
-    cv2.rectangle(overlapImage, (overlapROI[1],overlapROI[0]),
-                   (overlapROI[1]+overlapROI[3],overlapROI[0]+overlapROI[2]),(0,255,0),-1)
-    overallImage=cv2.addWeighted(cameraImage, 0.7, overlapImage, 0.2, 0)
-
-
-    cv2.imwrite("/home/ryan/CALIMAGE.ppm",overallImage)
-    return overallImage
-
 def getROIoverlap(leftROI,rightROI):
-    print(leftROI,rightROI)
-    print(leftROI,rightROI)
     x=max(leftROI[0],rightROI[0])
     y=max(leftROI[1],rightROI[1])
     w=min(leftROI[0]+leftROI[2],rightROI[0]+rightROI[2])-x
     h=min(leftROI[1]+leftROI[3],rightROI[1]+rightROI[3])-y
     return (x, y, w, h)
 
+def getSubROI(heightPerc,widthPerc,lROI,rROI):
+    overlap=getROIoverlap(lROI,rROI)
+    newW=int(widthPerc*overlap[2])
+    newH=int(heightPerc*overlap[3])
+    ###
+    ##left
+    newL=(int(overlap[0]+overlap[2]*(1-widthPerc)),int(overlap[1]+overlap[3]*(1-heightPerc)),newW,newH)
+    newR=(int(overlap[0]),int(overlap[1]+overlap[3]*(1-heightPerc)),newW,newH)
+    return newL,newR
 class RectificationInfo():
     def __init__(self):
         self.intXMapping=None

@@ -33,31 +33,3 @@ def genRandomCoordinate(xAvg,yAvg,zAvg):
     Point[1,0]=np.random.normal(0,yAvg,1)
     Point[2,0]=np.random.normal(0,zAvg,1)
     return Point
-
-
-
-
-def genRandomIdealLandmark(camera,simSettings,H):
-    validPoint=False
-    
-    # Data={}
-    # Data["Noise"]={}
-    # Data["Ideal"]={}
-    # while(not validPoint):
-    #     Data=Landmark
-    #     Point=genRandomCoordinate(landmarkSettings["Xdepth"],
-    #                                 landmarkSettings["Ydepth"],
-    #                                 landmarkSettings["Zdepth"])
-    #     validPoint,l,r=validateLandmark(Point,
-    #                                 kSettings["Pl"],
-    #                                 kSettings["Pr"],
-    #                                 kSettings["roi"],
-    #                                 landmarkSettings["HeightMaximum"])
-    #     Data["Ideal"]["X"]=Point
-    #     Data["Ideal"]["L"]=l
-    #     Data["Ideal"]["R"]=r
-
-def genRandomLandmark(camera,simSettings,H):
-    ###bumblebee camera
-    ###
-    pass

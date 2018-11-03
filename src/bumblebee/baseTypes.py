@@ -10,7 +10,36 @@ from sensor_msgs.msg import CameraInfo, Image
 import copy
 from bumblebee.utils import *
 from bumblebee.motion import *
+from bumblebee.camera import *
 import json
+
+class stereoLandmarkEdge:
+    def __init__(self,L,R,X=None,ID=-1):
+        self.L=copy.deepcopy(L)
+        self.R=copy.deepcopy(R)
+        self.X=copy.deepcopy(X)
+        self.ID=copy.deepcopy(ID)
+    def getDisparity(self):
+        return self.L[0,0]-self.R[0,0]
+    def getEpiError(self):
+        return self.L[1,0]-self.R[1,0]
+    def getQtriangulate(self,Q):
+        return reproject2(self.L,self.R,Q)
+    def getReprojectedDifference(self,Pl,Pr):
+        return getPredictedDiff(Pl,Pr,self.X,self.L,self.r)
+
+class stereoFrame:
+    def __init__(self,lEdges=None,rEdges=None):
+        self.KPl=None
+        self.KPr=None
+        self.rawLdesc=None
+        self.rawRdesc=None
+        self.X=None
+        self.L=None
+        self.R=None
+      
+
+
 
 
 class stereoEdge:

@@ -9,6 +9,7 @@ import tf.transformations
 
 from cv_bridge import CvBridge
 from bumblebee.calibration import *
+from bumblebee.drawing import *
 import bumblebee.utils as butil
 import argparse
 import time
@@ -21,8 +22,7 @@ parser.add_argument("CalibrationDirectory",
 parser.add_argument("--debug",default=True,
                     help="Print debug information such as transforms and camera matrices",
                     type=bool)
-parser.add_argument("--leftTopicPrefix",default="ideal/leftRectified",type=str)
-parser.add_argument("--rightTopicPrefix",default="ideal/rightRectified",type=str)
+parser.add_argument("--regionOfInterest",default="100,100",type=str,help="WidthPercentage,HeightPercentage")
 args,unknown=parser.parse_known_args()
 
 
@@ -43,7 +43,42 @@ print("Camera Extrinsics Loaded")
 intrin = butil.getPickledObject(calibrationDirectory + "/intrinsicCalibration.p")
 print("Camera Intrinsics Loaded")
 stereoCalibration=butil.getPickledObject(calibrationDirectory + "/StereoCalibration.p")
+##########
+##Region of interest calculate
+#################
 
+wPer,hPer=float(args.regionOfInterest.split(",")[0])/100.0,float(args.regionOfInterest.split(",")[1])/100.0
+print("Sub REgion",wPer,hPer)
+overlapROI=getROIoverlap(intrin.lROI,intrin.rROI)
+subROI=getSubROI(hPer,wPer,overlapROI,overlapROI)
+
+#####################
+###left camera
+####################
+
+##P=Kr[I|0]
+##D
+##no ROI
+#######Topic: ideal/left
+# LCamera=CameraInfo()
+# LCamera=stereoCalibration.inCalibrationData.meta.imgSize[0]
+# LCamera=stereoCalibration.inCalibrationData.meta.imgSize[1]
+# LCamera.distortion_model="plumb_bob" #TODO load based on distortion Model
+# LCamera=intrin.optimizedLeft.D
+# LCamera.K=intrin.optimizedLeft.K[0:3,0:3].flatten()
+# LCamera.R=np.identity(3,np.float64).flatten()
+# # LCamera.P=intrin.Kl.flatten()
+# LCamera.header.frame_id=args.leftTopicPrefix
+
+
+#####################
+###Ideal left camera
+####################
+
+##P=Krect[I|0]
+##no distortion
+##with overlapping region of interest
+#######Topic: ideal/left
 
 idealLeftCamera=CameraInfo()
 idealLeftCamera.height=stereoCalibration.inCalibrationData.meta.imgSize[0]
@@ -53,23 +88,45 @@ idealLeftCamera.D=[0,0,0,0,0]
 idealLeftCamera.K=intrin.Pl[0:3,0:3].flatten()
 idealLeftCamera.R=np.identity(3,np.float64).flatten()
 idealLeftCamera.P=intrin.Pl.flatten()
-idealLeftCamera.header.frame_id=args.leftTopicPrefix
-
-#im[y:y + h, x:x + w]
-overlapROI=getROIoverlap(intrin.lROI,intrin.rROI)
-ROIimage=copy.deepcopy(drawROI(intrin.lROI,intrin.rROI,overlapROI))
-
-cv2.imwrite(args.CalibrationDirectory+"/configROI.ppm",ROIimage)
-
-
-pubROIimage=rospy.Publisher(rospy.get_name()+"/roiImage",Image,queue_size=3,latch=True)
-pubROIimage.publish(cvb.cv2_to_imgmsg(ROIimage))
+idealLeftCamera.header.frame_id="Left/Rectified"
 
 idealLeftCamera.roi.x_offset=overlapROI[0]
 idealLeftCamera.roi.y_offset=overlapROI[1]
 idealLeftCamera.roi.height=overlapROI[3]
 idealLeftCamera.roi.width=overlapROI[2]
+#####################
+###Ideal sub left camera
+####################
 
+##P=Krect[I|0]
+##no distortion
+##with sub Region of interest defined as a percentage of the overlapping ROI
+#######Topic: subROI/left
+
+subROILeftCamera=CameraInfo()
+subROILeftCamera.height=stereoCalibration.inCalibrationData.meta.imgSize[0]
+subROILeftCamera.width=stereoCalibration.inCalibrationData.meta.imgSize[1]
+subROILeftCamera.distortion_model="plumb_bob" #TODO load based on distortion Model
+subROILeftCamera.D=[0,0,0,0,0]
+subROILeftCamera.K=intrin.Pl[0:3,0:3].flatten()
+subROILeftCamera.R=np.identity(3,np.float64).flatten()
+subROILeftCamera.P=intrin.Pl.flatten()
+subROILeftCamera.header.frame_id="Left/subROI"
+
+subROILeftCamera.roi.x_offset=subROI[0][0]
+subROILeftCamera.roi.y_offset=subROI[0][1]
+subROILeftCamera.roi.height=subROI[0][3]
+subROILeftCamera.roi.width=subROI[0][2]
+
+
+######################
+###Ideal right Camera
+#####################
+
+##Pr=Krect[I|perfectBaseline]
+##no distortion
+##with overlapping region of interest
+#######Topic: ideal/right
 idealRightCamera=CameraInfo()
 idealRightCamera.height=stereoCalibration.inCalibrationData.meta.imgSize[0]
 idealRightCamera.width=stereoCalibration.inCalibrationData.meta.imgSize[1]
@@ -79,35 +136,92 @@ idealRightCamera.D=[0,0,0,0,0]
 idealRightCamera.K=intrin.Pr[0:3,0:3].flatten()
 idealRightCamera.R=np.identity(3,np.float64).flatten()
 idealRightCamera.P=intrin.Pr.flatten()
-idealRightCamera.header.frame_id=args.rightTopicPrefix
+idealRightCamera.header.frame_id="Right/Rectified"
 
 idealRightCamera.roi.x_offset=overlapROI[0]
 idealRightCamera.roi.y_offset=overlapROI[1]
 idealRightCamera.roi.height=overlapROI[3]
 idealRightCamera.roi.width=overlapROI[2]
+#####################
+###Ideal sub Right camera
+####################
+
+##Pr=Krect[I|perfectBaseline]
+##no distortion
+##with sub Region of interest defined as a percentage of the overlapping ROI
+#######Topic: subROI/left
+
+subROIRightCamera=CameraInfo()
+subROIRightCamera.height=stereoCalibration.inCalibrationData.meta.imgSize[0]
+subROIRightCamera.width=stereoCalibration.inCalibrationData.meta.imgSize[1]
+subROIRightCamera.distortion_model="plumb_bob" #TODO load based on distortion Model
+subROIRightCamera.D=[0,0,0,0,0]
+subROIRightCamera.K=intrin.Pr[0:3,0:3].flatten()
+subROIRightCamera.R=np.identity(3,np.float64).flatten()
+subROIRightCamera.P=intrin.Pr.flatten()
+subROIRightCamera.header.frame_id="Right/subROI"
+
+subROIRightCamera.roi.x_offset=subROI[1][0]
+subROIRightCamera.roi.y_offset=subROI[1][1]
+subROIRightCamera.roi.height=subROI[1][3]
+subROIRightCamera.roi.width=subROI[1][2]
+
+############
+##Debug Drawing Information and saving
+
+dispImage=255*np.ones((768,1024,3))
+drawROIbox(dispImage,intrin.lROI,(255,0,0),drawOn=True)
+drawROIbox(dispImage,intrin.rROI,(0,0,255),drawOn=True)
+dispImage=drawROIarea(dispImage,overlapROI,(0,255,0))
+
+cv2.imwrite(args.CalibrationDirectory+"/configROI.ppm",dispImage)
+
+subROILimage=255*np.ones((768,1024,3))
+subROIRimage=255*np.ones((768,1024,3))
+drawROIbox(subROILimage,intrin.lROI,(255,0,0),drawOn=True)
+drawROIbox(subROIRimage,intrin.rROI,(0,0,255),drawOn=True)
+
+
+
+subROILImage=drawROIarea(subROILimage,subROI[0],(0,255,0))
+
+subROIRImage=drawROIarea(subROIRimage,subROI[1],(0,255,0))
+
+cv2.imwrite(args.CalibrationDirectory+"/configLROI.ppm",subROILImage)
+cv2.imwrite(args.CalibrationDirectory+"/configRROI.ppm",subROIRImage)
+
+
+
+
 QPub=rospy.Publisher(rospy.get_name()+"/Q",Image,queue_size=3,latch=True)
 
-cameraPublisherLeft=rospy.Publisher(rospy.get_name()+"/"+args.leftTopicPrefix+"/CameraInfo",CameraInfo,queue_size=10,latch=True)
-cameraPublisherRight = rospy.Publisher(rospy.get_name() +"/"+args.rightTopicPrefix+"/CameraInfo", CameraInfo, queue_size=10,latch=True)
+# pubL
+# pubR
+pubIdealL=rospy.Publisher(rospy.get_name()+"/Left/rectified/CameraInfo",CameraInfo,queue_size=10,latch=True)
+pubIdealL.publish(idealLeftCamera)
+pubIdealR=rospy.Publisher(rospy.get_name()+"/Right/rectified/CameraInfo",CameraInfo,queue_size=10,latch=True)
+pubIdealR.publish(idealRightCamera)
+pubSubL=rospy.Publisher(rospy.get_name()+"/Left/subROI/CameraInfo",CameraInfo,queue_size=10,latch=True)
+pubSubL.publish(subROILeftCamera)
+pubSubR=rospy.Publisher(rospy.get_name()+"/Right/subROI/CameraInfo",CameraInfo,queue_size=10,latch=True)
+pubSubR.publish(subROIRightCamera)
+
 QPub.publish(cvb.cv2_to_imgmsg(intrin.Q))
-cameraPublisherLeft.publish(idealLeftCamera)
-cameraPublisherRight.publish(idealRightCamera)
+
 print("published intrinsic Info")
-########publish Rectification Maps
+# ########publish Rectification Maps
 
 
-lmapixPub=rospy.Publisher(rospy.get_name()+"/idealLeft/intX",Image,queue_size=3,latch=True)
-lmapiyPub = rospy.Publisher(rospy.get_name() + "/idealLeft/intY", Image, queue_size=3, latch=True)
-lmapfxPub = rospy.Publisher(rospy.get_name() + "/idealLeft/floatX", Image, queue_size=3, latch=True)
-lmapfyPub = rospy.Publisher(rospy.get_name() + "/idealLeft/floatY", Image, queue_size=3, latch=True)
+lmapixPub=rospy.Publisher(rospy.get_name()+"/Left/intX",Image,queue_size=3,latch=True)
+lmapiyPub = rospy.Publisher(rospy.get_name() + "/Left/intY", Image, queue_size=3, latch=True)
+lmapfxPub = rospy.Publisher(rospy.get_name() + "/Left/floatX", Image, queue_size=3, latch=True)
+lmapfyPub = rospy.Publisher(rospy.get_name() + "/Left/floatY", Image, queue_size=3, latch=True)
 
-rmapixPub=rospy.Publisher(rospy.get_name()+"/idealRight/intX",Image,queue_size=3,latch=True)
-rmapiyPub = rospy.Publisher(rospy.get_name() + "/idealRight/intY", Image, queue_size=3, latch=True)
-rmapfxPub = rospy.Publisher(rospy.get_name() + "/idealRight/floatX", Image, queue_size=3, latch=True)
-rmapfyPub = rospy.Publisher(rospy.get_name() + "/idealRight/floatY", Image, queue_size=3, latch=True)
+rmapixPub=rospy.Publisher(rospy.get_name()+"/Right/intX",Image,queue_size=3,latch=True)
+rmapiyPub = rospy.Publisher(rospy.get_name() + "/Right/intY", Image, queue_size=3, latch=True)
+rmapfxPub = rospy.Publisher(rospy.get_name() + "/Right/floatX", Image, queue_size=3, latch=True)
+rmapfyPub = rospy.Publisher(rospy.get_name() + "/Right/floatY", Image, queue_size=3, latch=True)
 
-print(lMap.intXMapping.dtype)
-print(lMap.floatXMapping.dtype)
 
 lmapixPub.publish(cvb.cv2_to_imgmsg(lMap.intXMapping))
 lmapiyPub.publish(cvb.cv2_to_imgmsg(lMap.intYMapping))

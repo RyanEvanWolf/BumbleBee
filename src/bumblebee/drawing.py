@@ -29,7 +29,47 @@ def drawCalibrationCoverageMap(rectImages,foundPoints):
             cv2.line(outputImage,pt1,pt2,(20,80,0,0.1))
     return outputImage
 
-   
+
+def drawROI(leftROI,rightROI,overlapROI,imgSize=(1024,768)):
+    cameraImage=np.zeros((imgSize[1],imgSize[0],3), np.int8)
+    overlapImage=np.zeros((imgSize[1],imgSize[0],3), np.int8)
+    print((leftROI[1],leftROI[0]),(leftROI[1]+leftROI[3],leftROI[0]+leftROI[2]))
+    cv2.rectangle(cameraImage, (leftROI[0],leftROI[1]),
+                   (leftROI[0]+leftROI[2],leftROI[1]+leftROI[3]),(0,0,255),10)
+    cv2.rectangle(cameraImage, (rightROI[0],rightROI[1]),
+                   (rightROI[0]+rightROI[2],rightROI[1]+rightROI[3]),(255,0,0),10)
+    cv2.rectangle(overlapImage, (overlapROI[0],overlapROI[1]),
+                   (overlapROI[0]+overlapROI[2],overlapROI[1]+overlapROI[3]),(0,255,0),-1)
+    overallImage=cv2.addWeighted(cameraImage, 0.7, overlapImage, 0.2, 0)
+
+
+    cv2.imwrite("/home/ryan/CALIMAGE.ppm",overallImage)
+    return overallImage
+
+def drawROIbox(inImage,roi,col=(0,0,255),drawOn=False):
+    if(drawOn):
+        cv2.rectangle(inImage,(roi[0],roi[1]),
+                    (roi[0]+roi[2],roi[1]+roi[3]),
+                    col,2)  
+    else:
+        outImage=copy.deepcopy(inImage)
+        cv2.rectangle(outImage,(roi[0],roi[1]),
+                    (roi[0]+roi[2],roi[1]+roi[3]),
+                    col,2)         
+        return outImage
+def drawROIarea(inImage,roi,col=(0,0,255),drawOn=False):
+
+    boxImage=copy.deepcopy(inImage)
+    if(drawOn):
+        cv2.rectangle(boxImage,(roi[0],roi[1]),
+                    (roi[0]+roi[2],roi[1]+roi[3]),
+                    col,-1)  
+        inImage=copy.deepcopy(cv2.addWeighted(inImage, 0.7, boxImage, 0.2, 0))
+    else:
+        cv2.rectangle(boxImage,(roi[0],roi[1]),
+                    (roi[0]+roi[2],roi[1]+roi[3]),
+                    col,-1)         
+        return copy.deepcopy(cv2.addWeighted(inImage, 0.7, boxImage, 0.2, 0))
 def drawROI(inImage,roi):
     lCol=(0,0,255)
     leftCorner1=(roi[0],roi[1])#,lCol,3) 1,0
