@@ -10,6 +10,13 @@ from sensor_msgs.msg import CameraInfo, Image
 import copy
 from bumblebee.utils import *
 
+from bumblebee.motion import *
+
+def composeCamera(K,xMotion=np.zeros((6,1))):
+    P=np.zeros((3,4),dtype=np.float64)
+    transform=motionEdge(xMotion[0:3].reshape(3),xMotion[3:6].reshape(3),degrees=False)
+    P=K.dot(transform.getH())
+    return P
 
 def reproject2(l,r,Q):
     dispVect=np.ones((4,1),dtype=np.float64)
@@ -20,7 +27,7 @@ def reproject2(l,r,Q):
     xPred=Q.dot(dispVect)
     return xPred/xPred[3,0]
 
-def PredictPoint(X,P):
+def predictPoint(X,P):
     prediction=P.dot(X)
     prediction/=prediction[2]
     return prediction

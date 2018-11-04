@@ -28,15 +28,22 @@ class stereoLandmarkEdge:
     def getReprojectedDifference(self,Pl,Pr):
         return getPredictedDiff(Pl,Pr,self.X,self.L,self.r)
 
+
 class stereoFrame:
-    def __init__(self,lEdges=None,rEdges=None):
-        self.KPl=None
-        self.KPr=None
-        self.rawLdesc=None
-        self.rawRdesc=None
+    def __init__(self):
         self.X=None
-        self.L=None
         self.R=None
+        self.L=None
+
+# class stereoFrame:
+#     def __init__(self,lEdges=None,rEdges=None):
+#         self.KPl=None
+#         self.KPr=None
+#         self.rawLdesc=None
+#         self.rawRdesc=None
+#         self.X=None
+#         self.L=None
+#         self.R=None
       
 
 

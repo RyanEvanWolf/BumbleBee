@@ -10,7 +10,6 @@ import decimal
 
 
 
-
 def composeR(roll,pitch,yaw,degrees=True):
     if(degrees):
         q=quaternion_from_euler(radians(roll),
@@ -157,20 +156,23 @@ def estimateScale(xPrev,xCurrent,R,T,inliers):
     T=averageScale.dot(Ti)
     return averageScale,T,countedIn
 
+
+def getRtheta(H):
+    return copy.deepcopy(euler_from_matrix(H[0:3,0:3],'szxy'))
+
+
 class motionEdge:
-    def __init__(self,Roll=0,Pitch=0,Yaw=0,X=0,Y=0,Z=0,degrees=True):
-        self.x=np.zeros((6,1))###R,P,Y,X,Y,Z  Rtheta, T  in radians
-        if(degrees):
-            self.x[0,0]=radians(Roll)
-            self.x[1,0]=radians(Pitch)
-            self.x[2,0]=radians(Yaw)
-        else:
-            self.x[0,0]=Roll
-            self.x[1,0]=Pitch
-            self.x[2,0]=Yaw
-        self.x[3,0]=X
-        self.y[4,0]=Y
-        self.z[5,0]=Z
+    def __init__(self,Rvect=None,Tvect=None,H=None,degrees=True):
+        self.x=np.zeros((6,1))
+        if((Rvect is not None) and (Tvect is not None)):
+            if(degrees):
+                self.x[0:3,0]=np.radians(Rvect).reshape(3)
+            else:
+                self.x[0:3,0]=Rvect
+            self.x[3:,0]=Tvect.reshape(3)
+        elif(H is not None):
+            self.x[0:3,0]=getRtheta(H)
+            self.x[3:,0]=H[0:3,3]
     def getR(self):
         return composeR(self.x[0,0],self.x[1,0],self.x[2,0],False)
     def getT(self):
@@ -180,8 +182,9 @@ class motionEdge:
     def getC(self):
         return -1*np.linalg.inv(self.getR()).dot(self.getT())
     def getRtheta(self):
-        ans=np.zeros((3,1)):
+        ans=np.zeros((3,1))
         ans[0,0]=degrees(self.x[0,0])
         ans[1,0]=degrees(self.x[1,0])
         ans[2,0]=degrees(self.x[2,0])
         return ans
+
