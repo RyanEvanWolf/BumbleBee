@@ -15,7 +15,7 @@ from bumblebee.motion import *
 def composeCamera(K,xMotion=np.zeros((6,1))):
     P=np.zeros((3,4),dtype=np.float64)
     transform=motionEdge(xMotion[0:3].reshape(3),xMotion[3:6].reshape(3),degrees=False)
-    P=K.dot(transform.getH())
+    P=K.dot(transform.getH()[0:3,:])
     return P
 
 def reproject2(l,r,Q):

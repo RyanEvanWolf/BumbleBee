@@ -10,15 +10,15 @@ import decimal
 
 
 
-def composeR(roll,pitch,yaw,degrees=True):
+def composeR(Rtheta,degrees=False):
     if(degrees):
-        q=quaternion_from_euler(radians(roll),
-                                radians(pitch),
-                                radians(yaw),'szxy')
+        q=quaternion_from_euler(radians(Rtheta[0]),
+                                radians(Rtheta[1]),
+                                radians(Rtheta[2]),'szxy')
     else:
-        q=quaternion_from_euler(roll,
-                                pitch,
-                                yaw,'szxy')     
+        q=quaternion_from_euler(Rtheta[0],
+                                Rtheta[1],
+                                Rtheta[2],'szxy')     
     return quaternion_matrix(q)[0:3,0:3]  
 
     
@@ -160,7 +160,6 @@ def estimateScale(xPrev,xCurrent,R,T,inliers):
 def getRtheta(H):
     return copy.deepcopy(euler_from_matrix(H[0:3,0:3],'szxy'))
 
-
 class motionEdge:
     def __init__(self,Rvect=None,Tvect=None,H=None,degrees=True):
         self.x=np.zeros((6,1))
@@ -174,7 +173,7 @@ class motionEdge:
             self.x[0:3,0]=getRtheta(H)
             self.x[3:,0]=H[0:3,3]
     def getR(self):
-        return composeR(self.x[0,0],self.x[1,0],self.x[2,0],False)
+        return composeR(self.x[0:3,0])
     def getT(self):
         return copy.deepcopy(self.x[3:,0])
     def getH(self):
@@ -183,8 +182,19 @@ class motionEdge:
         return -1*np.linalg.inv(self.getR()).dot(self.getT())
     def getRtheta(self):
         ans=np.zeros((3,1))
-        ans[0,0]=degrees(self.x[0,0])
-        ans[1,0]=degrees(self.x[1,0])
-        ans[2,0]=degrees(self.x[2,0])
+        ans[0]=degrees(self.x[0])
+        ans[1]=degrees(self.x[1])
+        ans[2]=degrees(self.x[2])
         return ans
+    def getFormatted(self):
+        result={}
+        Rtheta=self.getRtheta()
+        result["Roll"]=Rtheta[0,0]
+        result["Pitch"]=Rtheta[1,0]
+        result["Yaw"]=Rtheta[2,0]
+        c=self.getC()
+        result["X"]=1000*c[0]
+        result["Y"]=1000*c[1]
+        result["Z"]=1000*c[2]
+        return result
 
