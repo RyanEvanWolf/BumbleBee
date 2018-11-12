@@ -12,6 +12,33 @@ from bumblebee.utils import *
 
 from bumblebee.motion import *
 
+
+def predictPoint(X,P,homogenous=True):
+    '''
+    Given a projective matrix,
+    predict the pixel locations in ohomgenous coordinates
+
+    assumes X is either a single [4xN,1] where [X1 Y1 Z1 W1 X2 Y2 ...]^T
+    else it must be in form [4,N] where
+            [X1 X2 X3 ... Xn]
+    x{      [Y1 Y2 Y3 ... Yn]
+            [Z1 Z2 Z3 ... Zn]
+            [W1 W2 W3 ... Wn]
+    returns M=P*x
+    '''
+    result=None
+    if(X.shape[1]>=1):
+        ###assume it is in the form
+        ### 
+        result=P.dot(X)  
+    else:
+        reshapedX=X.reshape((4,X.shape[1]/4))  
+        result=P.dot(reshapedX)
+    if(homogenous):
+        result/=result[3,:]
+    return result  
+
+
 def composeCamera(K,xMotion=np.zeros((6,1))):
     P=np.zeros((3,4),dtype=np.float64)
     transform=motionEdge(xMotion[0:3].reshape(3),xMotion[3:6].reshape(3),degrees=False)

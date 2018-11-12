@@ -160,6 +160,30 @@ def estimateScale(xPrev,xCurrent,R,T,inliers):
 def getRtheta(H):
     return copy.deepcopy(euler_from_matrix(H[0:3,0:3],'szxy'))
 
+def getH(xPose):
+    H=np.zeros((4,4))
+    H[3,3]=1
+    H[0:3,0:3]=composeR(xPose.reshape(6)[0:3])
+    H[0:3,3]=xPose.flatten()[3:6]
+    return H
+
+def decompose2X(H):
+    result=np.zeros((6,1))
+    result[0:3,0]=np.array(copy.deepcopy(euler_from_matrix(H[0:3,0:3],'szxy'))).reshape(3)
+    result[3:6,0]=H[0:3,3].reshape(3)
+    return result
+
+def getxPoseFormatted(xPose):
+    result={}
+    Rtheta=np.degrees(xPose.flatten()[0:3])
+    R=composeR(xPose.flatten()[0:3])
+    result["Roll"]=Rtheta[0]
+    result["Pitch"]=Rtheta[1]
+    result["Yaw"]=Rtheta[2]
+    result["T"]=xPose[3:6,0]
+    #result["C"]=-np.linalg.inv(R).dot(result["T"])
+    return result
+
 class motionEdge:
     def __init__(self,Rvect=None,Tvect=None,H=None,degrees=True):
         self.x=np.zeros((6,1))
