@@ -12,7 +12,8 @@ from bumblebee.utils import *
 from bumblebee.motion import *
 from bumblebee.camera import *
 import json
-
+import msgpack
+import msgpack_numpy as m
 
 
 class stereoLandmarkEdge:
@@ -53,9 +54,35 @@ class slidingWindow(object):
         self.X=np.zeros((0,0),dtype=np.float64) ###[Pose0 Pose1 Pose2|landmarkA landmarkB landmarkC ...]
         self.M=[]
         self.tracks=[]
-        self.inliers=None
+        self.inliers=[]
         self.nLandmarks=0
         self.nPoses=frames
+    ###########
+    ##admin functions
+    ###############
+    def serializeWindow(self):
+        binDiction={}
+        binDiction["kSettings"]=pickle.dumps(self.kSettings)
+        binDiction["M"]=[]
+        for i in self.M:
+            binDiction["M"].append(msgpack.packb(i,default=m.encode))
+        binDiction["X"]=msgpack.packb(self.X,default=m.encode)
+        binDiction["inliers"]=msgpack.dumps(self.inliers)
+        binDiction["tracks"]=msgpack.dumps(self.tracks)
+        binDiction["nLandmarks"]=self.nLandmarks
+        binDiction["nPoses"]=self.nPoses
+        return msgpack.dumps(binDiction)
+    def deserializeWindow(self,data):
+        intern=msgpack.loads(data)
+        self.kSettings=pickle.loads(intern["kSettings"])
+        self.X=msgpack.unpackb(intern["X"],object_hook=m.decode)
+        self.M=[]
+        for i in intern["M"]:
+            self.M.append(msgpack.unpackb(i,object_hook=m.decode))
+        self.inliers=msgpack.loads(intern["inliers"])
+        self.tracks=msgpack.loads(intern["tracks"])
+        self.nLandmarks=intern["nLandmarks"]
+        self.nPoses=intern["nPoses"]
     ################
     ##future functions
     def addLandmark(X,measurements,trackIndexes=None):

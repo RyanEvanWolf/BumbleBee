@@ -50,14 +50,16 @@ def getRectificationMappings(serverNodeName="/bumblebee_configuration",left=True
         cameraSettings["Mapfy"]=cvb.imgmsg_to_cv2(rospy.wait_for_message(serverNodeName+"/Right/floatY",Image))  
     return cameraSettings
 
-def getCameraSettingsFromServer(serverNodeName="/bumblebee_configuration",cameraType="subROI"):
+def getCameraSettingsFromServer(serverNodeName="/bumblebee_configuration",cameraType="subROI",full=False):
     cvb=CvBridge()
     ##assumes a node has been declared
     cameraSettings={}
+    cameraSettings["FULL"]=full
     print(serverNodeName,cameraType)
     cameraSettings["Q"]=cvb.imgmsg_to_cv2(rospy.wait_for_message(serverNodeName+"/Q",Image))
-    cameraSettings["Lmap"]=getRectificationMappings()
-    cameraSettings["Rmap"]=getRectificationMappings(left=False)
+    if(full):
+        cameraSettings["Lmap"]=getRectificationMappings()
+        cameraSettings["Rmap"]=getRectificationMappings(left=False)
     print(serverNodeName+"/Left/"+cameraType+"/CameraInfo")
     print(serverNodeName+"/Right/"+cameraType+"/CameraInfo")
     cameraSettings["lInfo"]=rospy.wait_for_message(serverNodeName+"/Left/"+cameraType+"/CameraInfo",CameraInfo)

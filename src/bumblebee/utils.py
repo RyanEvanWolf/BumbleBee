@@ -30,6 +30,9 @@ def getPickledObject(fileName):
     f.close()
     return a
 
+def serializeCameraSettings(camera):
+    return None
+
 def to_precision(x,p):
     """
     returns a string representation of x formatted with a precision of p
