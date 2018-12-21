@@ -49,8 +49,11 @@ class stereoFrame:
 #         self.R=None
       
 class slidingWindow(object):
-    def __init__(self,cameraSettings,frames=2):
-        self.kSettings=copy.deepcopy(cameraSettings)
+    def __init__(self,cameraSettings=None,frames=2):
+        if(cameraSettings is None):
+            self.kSettings=None
+        else:
+            self.kSettings=copy.deepcopy(cameraSettings)
         self.X=np.zeros((0,0),dtype=np.float64) ###[Pose0 Pose1 Pose2|landmarkA landmarkB landmarkC ...]
         self.M=[]
         self.tracks=[]

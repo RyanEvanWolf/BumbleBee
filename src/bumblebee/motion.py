@@ -173,7 +173,7 @@ def decompose2X(H):
     result[3:6,0]=H[0:3,3].reshape(3)
     return result
 
-def getxPoseFormatted(xPose):
+def getxPoseFormatted(xPose,mm=False):
     result={}
     Rtheta=np.degrees(xPose.flatten()[0:3])
     R=composeR(xPose.flatten()[0:3])
@@ -181,8 +181,17 @@ def getxPoseFormatted(xPose):
     result["Pitch"]=Rtheta[1]
     result["Yaw"]=Rtheta[2]
     result["T"]=xPose[3:6,0]
-    #result["C"]=-np.linalg.inv(R).dot(result["T"])
+    result["C"]=-np.linalg.inv(R).dot(result["T"])
+    if(mm):
+        result["T"]*=1000
+        result["C"]*=1000
     return result
+
+def getL2Formatted(xDict):
+    '''
+    return Rc,Rtheta
+    '''
+    return np.sqrt((xDict["C"]**2).sum()),np.sqrt(xDict["Roll"]**2 +xDict["Yaw"]**2 +xDict["Pitch"]**2)
 
 class motionEdge:
     def __init__(self,Rvect=None,Tvect=None,H=None,degrees=True):

@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+
+import rospy
+import random
+import argparse
+import cv2
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
+from Queue import Queue
+import time
+
+parser =argparse.ArgumentParser()
+parser.add_argument("topics",
+                    help=("csv topic names"),
+                    type=str)
+args,unknown=parser.parse_known_args()
+
+
+ID=random.randint(1,20000)
+
+global dQ
+global cvb
+
+
+dQ=Queue(1)
+
+
+cvb=CvBridge()
+
+rospy.init_node("viewer_"+str(ID))
+
+
+def update(data):
+    global outputs
+    global cvb
+    print(args,time.time())
+    img=cvb.imgmsg_to_cv2(data)
+    dQ.put_nowait(img)
+    print(img.shape)
+    #cv2.imshow(args,img)
+    #cv2.waitKey(1)
+
+i=args.topics
+
+wind=cv2.namedWindow(i,cv2.WINDOW_NORMAL)
+s=rospy.Subscriber(i,Image,update)
+
+
+while(not rospy.is_shutdown()):
+    if(dQ.qsize()>0):
+        cv2.imshow(i,dQ.get())
+    cv2.waitKey(1)
+
+

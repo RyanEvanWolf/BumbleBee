@@ -233,4 +233,39 @@ rmapiyPub.publish(cvb.cv2_to_imgmsg(rMap.intYMapping))
 rmapfxPub.publish(cvb.cv2_to_imgmsg(rMap.floatXMapping))
 rmapfyPub.publish(cvb.cv2_to_imgmsg(rMap.floatYMapping))
 print("published rectification Info")
+##########
+###publish rectified camera Coordinate systems
+#########
+
+# br = tf.TransformBroadcaster()
+
+
+# cvTransformMsg=TransformStamped()
+# cvTransformMsg.header.frame_id="world"
+# cvTransformMsg.child_frame_id="cv"
+# cvTransformMsg.transform.translation.x=0
+# cvTransformMsg.transform.translation.y=0
+# cvTransformMsg.transform.translation.z=0
+
+
+# q=quaternion_from_euler(radians(90),
+#                                 radians(0),
+#                                 radians(90),'szyx')#Rtheta[2]),'szxy')
+
+# cvTransformMsg.transform.rotation.x=q[0]
+# cvTransformMsg.transform.rotation.y=q[1]
+# cvTransformMsg.transform.rotation.z=q[2]
+# cvTransformMsg.transform.rotation.w=q[3]
+
+# while(True):
+#     cvTransformMsg.header.stamp=rospy.Time.now()
+#     br.sendTransformMessage(cvTransformMsg)
+#     time.sleep(0.01)
+
+
+
+
+
+
+
 rospy.spin()
