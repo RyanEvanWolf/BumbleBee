@@ -1,5 +1,5 @@
 import numpy as np
-from tf.transformations import quaternion_from_euler,quaternion_matrix,euler_from_matrix
+from tf.transformations import quaternion_from_matrix,quaternion_from_euler,quaternion_matrix,euler_from_matrix
 from math import pi,radians,degrees
 import rosbag
 import time
@@ -8,6 +8,27 @@ import copy
 import decimal
 
 
+
+def rigid_transform_3D(previousLandmarks, currentLandmarks):
+    N=previousLandmarks.shape[1]
+    centroid_A = np.mean(previousLandmarks.T, axis=0)
+    centroid_B = np.mean(currentLandmarks.T, axis=0)
+
+    AA = copy.deepcopy(previousLandmarks.T - np.tile(centroid_A, (N, 1)))
+    BB = copy.deepcopy(currentLandmarks.T - np.tile(centroid_B, (N, 1)))
+    H = np.transpose(AA).dot(BB)
+
+    U, S, Vt = np.linalg.svd(H)
+    R = (Vt.T).dot( U.T)
+    # special reflection case
+    if(np.linalg.det(R) < 0):
+        Vt[2,:] *= -1
+        R = (Vt.T).dot(U.T)
+    t = -R.dot(centroid_A.T) + centroid_B.T
+
+    
+
+    return quaternion_from_matrix(createHomog(R)),t
 
 
 def composeR(Rtheta,degrees=False):

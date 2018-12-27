@@ -43,6 +43,7 @@ def update(data):
 i=args.topics
 
 wind=cv2.namedWindow(i,cv2.WINDOW_NORMAL)
+cv2.resizeWindow(i,400,400)
 s=rospy.Subscriber(i,Image,update)
 
 
