@@ -12,6 +12,34 @@ from bumblebee.utils import *
 from bumblebee.drawing import *
 
 
+
+
+
+
+def getProjections(cameraSet,Xset):
+    '''
+    cameraSet  = [P0 P1  P2  P3]
+    Xset= [X1 X2 X3]
+    M=[P0.X1   P0.X2   
+       P1.X1   P1.X2   
+            ....    ]
+    '''
+
+    M=np.zeros((3*len(cameraSet)/2,Xset.shape[1]))
+    for lIndex in range(Xset.shape[1]):
+        currentX=Xset[:,lIndex].reshape(4,1)
+
+        for kIndex in range(len(cameraSet)/2):
+            predictionL=cameraSet[kIndex*2].dot(currentX)
+            predictionL/=predictionL[2,0]
+            predictionR=cameraSet[kIndex*2+1].dot(currentX)
+            predictionR/=predictionR[2,0]  
+            M[kIndex*3,lIndex]=predictionL[0,0]
+            M[kIndex*3+1,lIndex]=predictionL[1,0]
+            M[kIndex*3+2,lIndex]=predictionR[0,0]
+     
+    return M
+
 def composeProjectionMatrix(K,R,T):
     #P=K[R|T]=K[R|-RC]
     P=np.zeros((3,4),dtype=np.float64)
@@ -20,8 +48,27 @@ def composeProjectionMatrix(K,R,T):
     P = K.dot(P)
     return P 
 
-def rmsReprojectionError(Pl,Pr,landmarkData):
-    pass
+
+def rmsReprojectionError(Pl,Pr,Xset,Hset,Mset):
+    '''
+    Xset=[Xn Xn+1 Xn+2 ...]
+    Hset=[Hn to n+1     Hn+1 to Hn+2     ...]
+    Mset=[Lu   ...
+          Lv   ...
+          Ru   ...
+                        ]
+    '''
+
+    for landmark in range(0,len(Xset)):
+        Ml=predictPoint(Xset[landmark],Pl)
+        Mr=predictPoint(Xset[landmark],Pr)
+        print(Ml.shape)
+    print(len(Xset),len(Hset),len(Mset))
+
+
+
+
+    return 0
     # Xest,lPixels,rPixels):
 
 

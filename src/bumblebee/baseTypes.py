@@ -11,7 +11,7 @@ from sensor_msgs.msg import CameraInfo, Image,PointCloud,ChannelFloat32
 from geometry_msgs.msg import PoseStamped,TransformStamped,Point32
 
 import copy
-from bumblebee.stereo import getCameraSettingsFromServer,ROIfrmMsg
+from bumblebee.stereo import getCameraSettingsFromServer,ROIfrmMsg,rmsReprojectionError,getProjections
 from bumblebee.utils import *
 from bumblebee.motion import *
 from bumblebee.camera import *
@@ -26,6 +26,13 @@ import networkx as nx
 from tf import TransformListener,TransformBroadcaster
 
 from tf.transformations import *
+
+
+from std_msgs.msg import ColorRGBA
+
+
+
+import matplotlib.pyplot as plt
 
 class stereoLandmarkEdge:
     def __init__(self,L,R,X=None,ID=-1):
@@ -65,6 +72,9 @@ def randomPartition(ids,minParameters=7):
     parameterIndexes=sorted(indexes[:minParameters])
     testPointIdexes=sorted(indexes[minParameters:])
     return parameterIndexes,testPointIdexes
+
+
+
 class slidingGraph(nx.DiGraph):
     def __init__(self,displayName="graph",frames=2,graph=None):
         if(graph is None):
@@ -79,14 +89,15 @@ class slidingGraph(nx.DiGraph):
         self.nLandmarks=0
         self.nPoses=0
 
-        
+        self.cvb=CvBridge()
         self.debugTF =TransformBroadcaster()
         self.listener =TransformListener()
 
         self.debugPub=rospy.Publisher(displayName+"/debug/deltaPose",PoseStamped,queue_size=3)
-        self.debugMap=rospy.Publisher(displayName+"/debug/Map",MarkerArray,queue_size=2)
+        self.debugMap=rospy.Publisher(displayName+"/debug/Map",MarkerArray,queue_size=2,latch=True)
         self.debugStereo=rospy.Publisher(displayName+"/debug/stereo",PointCloud,queue_size=2)
         self.debugCurrent=rospy.Publisher(displayName+"/debug/currentPose",PoseStamped,queue_size=2)
+        self.debugMatches=rospy.Publisher(displayName+"/debug/Tracks",Image,queue_size=4)
     def newPoseVertex(self,ID=None):
         if(ID is None):
             pId="p_"+str(self.nPoses).zfill(7)
@@ -145,55 +156,112 @@ class slidingGraph(nx.DiGraph):
     ####Motion Algorithms
     #########################################
     def svdRANSAC(self,sourceFrame,targetFrame):
+        print("RANSAC @",targetFrame)
         trackIDS=self.getLandmarkTracksAT(sourceFrame,targetFrame)
 
 
-        maxIterations=1
+        maxIterations=20
         goodModel=0.8*self.nLandmarks
-        bestFit=np.zeros((6,1))
+        bestFit=[[0,0,0,1],[0,0,0]]
         besterr=np.inf 
         bestInliers=[]
-        minRMSerror=0.05
-        
-        previousX=np.zeros((4,len(trackIDS)))
-        currentX=np.zeros((4,len(trackIDS)))
-        
+        minRMSerror=0.1
         count=0
-        for k in trackIDS:
-            previous=self.edges[sourceFrame,k]
-            current=self.edges[targetFrame,k]
 
-            previousX[:,count]=previous["X"].reshape(4)
-            currentX[:,count]=current["X"].reshape(4)
-            count+=1
+
+        Xmatrix,Mmatrix=self.getLandmarkTrackDataAT(sourceFrame,targetFrame)
         count=0
         msg=PoseStamped()
         msg.header.frame_id="world"
+        msg.pose.orientation.w=1
+
         while(count<maxIterations and besterr>minRMSerror):
-
-            paramEstimateIndexes,testPointIndexes=randomPartition(trackIDS)
-            
-            motionHypothesis=rigid_transform_3D(currentX[0:3,paramEstimateIndexes],
-                                                previousX[0:3,paramEstimateIndexes])
-
-            
-            msg.pose.orientation.x=motionHypothesis[0][0]
-            msg.pose.orientation.y=motionHypothesis[0][1]
-            msg.pose.orientation.z=motionHypothesis[0][2]
-            msg.pose.orientation.w=motionHypothesis[0][3]
-
-            msg.pose.position.x=motionHypothesis[1][0]
-            msg.pose.position.y=motionHypothesis[1][1]
-            msg.pose.position.z=motionHypothesis[1][2]
+            paramEstimateIndexes,testPointIndexes=randomPartition(trackIDS,3)
+            try:
+                motionHypothesis=rigid_transform_3D(Xmatrix[0:3,paramEstimateIndexes],
+                                                    Xmatrix[4:7,paramEstimateIndexes])
 
 
 
+                R=quaternion_matrix(motionHypothesis[0])
+                T=np.zeros((3,1))
+                
+                T[0,0]=motionHypothesis[1][0]
+                T[1,0]=motionHypothesis[1][1]
+                T[2,0]=motionHypothesis[1][2]
 
-            self.nodes[targetFrame]["msg"].transform.rotation=msg.pose.orientation
-            self.nodes[targetFrame]["msg"].transform.translation.x=motionHypothesis[1][0]
-            self.nodes[targetFrame]["msg"].transform.translation.y=motionHypothesis[1][1]
-            self.nodes[targetFrame]["msg"].transform.translation.z=motionHypothesis[1][2]
+                H=createHomog(R[0:3,0:3],T)
+                predictions=getProjections([self.kSettings["Pl"],self.kSettings["Pr"],
+                                            self.kSettings["Pl"].dot(H),self.kSettings["Pr"].dot(H)],
+                            Xmatrix[0:4,testPointIndexes])
+                e=predictions-Mmatrix[:,testPointIndexes]
+                inlierIndexes=[]
+                inlierRMS=[]
+                for i in range(len(testPointIndexes)):
+                    rms=np.sqrt((e[:,i].flatten()**2).mean())
+                    if(rms<0.2):
+                        inlierIndexes.append(testPointIndexes[i])
+                        inlierRMS.append(rms)
+
+
+
+                if(len(inlierIndexes)>len(bestInliers)):
+                    
+                    ############
+                    ###new model
+                    #plt.plot(inlierRMS)
+
+                    betterHypothesis=rigid_transform_3D(Xmatrix[0:3,inlierIndexes],
+                                                     Xmatrix[4:7,inlierIndexes])
+                    R=quaternion_matrix( betterHypothesis[0])
+                    T=np.zeros((3,1))
+                    
+                    T[0,0]= betterHypothesis[1][0]
+                    T[1,0]= betterHypothesis[1][1]
+                    T[2,0]= betterHypothesis[1][2]
+
+                    H=createHomog(R[0:3,0:3],T)
+                    predictions=getProjections([self.kSettings["Pl"],self.kSettings["Pr"],
+                                                self.kSettings["Pl"].dot(H),self.kSettings["Pr"].dot(H)],
+                                Xmatrix[0:4,inlierIndexes])
+                    e=predictions-Mmatrix[:,inlierIndexes]
+                    RMS=np.sqrt((e.flatten()**2).mean())
+                    secondRMS=[]
+                    for i in range(len(inlierIndexes)):
+                        rms=np.sqrt((e[:,i].flatten()**2).mean())
+                        secondRMS.append(rms)
+                    q=quaternion_from_matrix(np.linalg.inv(H))
+                    cx=H[0,3]
+                    cy=H[1,3]
+                    cz=H[2,3]
+                    betterHypothesis=[q,[cx,cy,cz]]
+
+                    bestFit=betterHypothesis
+                    besterr=RMS
+                    bestInliers=inlierIndexes 
+                    print("Better Model",besterr,len(bestInliers)) 
+
+                    #plt.plot(secondRMS,'r')
+                    #plt.show()
+                
+            except Exception as e:
+                print("motion Fail",e)
+
             count+=1
+        print("----RESULT",besterr,len(bestInliers))
+        msg.pose.orientation.x=bestFit[0][0]
+        msg.pose.orientation.y=bestFit[0][1]
+        msg.pose.orientation.z=bestFit[0][2]
+        msg.pose.orientation.w=bestFit[0][3]###display is inverse of calculation
+
+        msg.pose.position.x=-bestFit[1][0]
+        msg.pose.position.y=-bestFit[1][1]
+        msg.pose.position.z=-bestFit[1][2]
+
+        self.nodes[targetFrame]["msg"].transform.rotation=msg.pose.orientation
+        self.nodes[targetFrame]["msg"].transform.translation.x=msg.pose.position.x
+        self.nodes[targetFrame]["msg"].transform.translation.y=msg.pose.position.y
+        self.nodes[targetFrame]["msg"].transform.translation.z=msg.pose.position.z
         self.debugPub.publish(msg)
         return msg
     #####################
@@ -211,6 +279,26 @@ class slidingGraph(nx.DiGraph):
         tracksSource=self.getLandmarksVisibleAT(sourcePose)
         tracksTarget=self.getLandmarksVisibleAT(targetPose)
         return sorted([x for x in tracksSource if x in tracksTarget])
+    def getLandmarkTrackDataAT(self,sourcePose,targetPose):
+        TrackSet=self.getLandmarkTracksAT(sourcePose,targetPose)
+
+        X=np.zeros((4*2,len(TrackSet)))
+        M=np.zeros((3*2,len(TrackSet)))
+
+        for k in range(len(TrackSet)):
+            X[0:4,k]=self.edges[(sourcePose,TrackSet[k])]["X"].reshape(4)
+            X[4:8,k]=self.edges[(targetPose,TrackSet[k])]["X"].reshape(4)
+            M[0:3,k]=self.edges[(sourcePose,TrackSet[k])]["M"][0:3,0].reshape(3)
+            M[3:6,k]=self.edges[(targetPose,TrackSet[k])]["M"][0:3,0].reshape(3)
+        return X,M
+    def getLandmarkDataAT(self,setPoses,landmarkID):
+        X =np.zeros((4,len(setPoses)))
+        M=np.zeros((3,len(setPoses)))
+        
+        for p in range(len(setPoses)):
+            X[:,p]=self.edges[(setPoses[p],landmarkID)]["X"].reshape(4)
+            M[:,p]=self.edges[(setPoses[p],landmarkID)]["M"][0:3,0].reshape(3)
+        return X,M
     ######################
     ###display algorithms
     ######################
@@ -220,7 +308,7 @@ class slidingGraph(nx.DiGraph):
             m=self.nodes[pose]["msg"]
             m.header.stamp=rospy.Time()
             self.debugTF.sendTransformMessage(m)
-    def publishGlobalPoints(self):
+    def publishGlobalPoints(self,colour=ColorRGBA(0,0,1,0.5)):
         l=self.getLandmarkVertices()
 
         m=MarkerArray()
@@ -241,8 +329,7 @@ class slidingGraph(nx.DiGraph):
             newMarker.scale.x=0.1
             newMarker.scale.y=0.1
             newMarker.scale.z=0.1
-            newMarker.color.a=1
-            newMarker.color.b=1
+            newMarker.color=colour
             m.markers.append(newMarker)
 
         self.debugMap.publish(m)      
@@ -264,7 +351,6 @@ class slidingGraph(nx.DiGraph):
             inPoint.z=self.edges[PoseID,landmark]["X"][2,0]
             msg.points.append(inPoint)
             msg.channels.append(c)
-        print("Points",len(msg.points))
         self.debugStereo.publish(msg)
 
     def publishCurrentPose(self):
@@ -287,7 +373,45 @@ class slidingGraph(nx.DiGraph):
         msg.pose.orientation.w=r[3]
 
         self.debugCurrent.publish(msg)
+    def playbackPoses(self,delay=0.2):
+        Poses=self.getPoseVertices()
 
+        for i in range(1,len(Poses)):
+            print(Poses[i])
+            msg=PoseStamped()
+            msg.header.frame_id="world"
+            #msg.child_frame_id=self.displayName+"/"+activePose
+            (t,r)=self.listener.lookupTransform('world',self.displayName+"/"+Poses[i], rospy.Time(0))
+            
+            msg.header.stamp=rospy.Time()
+
+            msg.pose.position.x=t[0]
+            msg.pose.position.y=t[1]
+            msg.pose.position.z=t[2]
+
+            msg.pose.orientation.x=r[0]
+            msg.pose.orientation.y=r[1]
+            msg.pose.orientation.z=r[2]
+            msg.pose.orientation.w=r[3]
+
+
+            self.debugCurrent.publish(msg)
+            self.publishLocalPoints(Poses[i])
+
+            img=np.zeros((768,1024,3))
+            for k in self.getLandmarkVertices():
+                self.plotLandmark(img,k,[Poses[i-1],Poses[i]])
+            self.debugMatches.publish(self.cvb.cv2_to_imgmsg(img))
+            time.sleep(delay)
+            # img=np.zeros((768,1024,3))
+
+            # for k in self.getLandmarkVertices():
+            #     self.plotLandmark(img,k,[previousPoseName,currentPoseName])
+            # cv2.imshow("a",img)
+            # cv2.waitKey(1)
+
+
+        print("finished PlayBack")
         # self.listener
 
         # while(count<maxIterations and besterr>minRMSerror):

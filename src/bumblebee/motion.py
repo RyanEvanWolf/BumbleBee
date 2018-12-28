@@ -10,6 +10,10 @@ import decimal
 
 
 def rigid_transform_3D(previousLandmarks, currentLandmarks):
+    '''
+    Transform From 
+    Xn=H . Xn-1
+    '''
     N=previousLandmarks.shape[1]
     centroid_A = np.mean(previousLandmarks.T, axis=0)
     centroid_B = np.mean(currentLandmarks.T, axis=0)
