@@ -109,6 +109,7 @@ add_service_files(
 	getQ.srv
 	getCameraInfo.srv
 	imageRectification.srv
+	saveGraph.srv
 )
 
 ## Generate actions in the 'action' folder

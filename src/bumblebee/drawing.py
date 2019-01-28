@@ -118,18 +118,18 @@ def multipleErrorHist(rmsErrorList,colourList,keylist,xlabel,ylabel="Total Image
     fig, ax1 = plt.subplots()
     ax2=ax1.twinx()
     ax2.grid(False)
-    ax1.set_xlabel(xlabel)
-    ax1.set_ylabel(ylabel)
-    ax2.set_ylabel('Probability Density Function')
+    ax1.set_xlabel(xlabel,fontsize=18)
+    ax1.set_ylabel(ylabel,fontsize=18)
+    ax2.set_ylabel('Probability Density Function',fontsize=18)
     for histIndex in range(0,len(rmsErrorList)):
         ax1.hist(rmsErrorList[histIndex],bins,edgecolor=(0,0,0),color=colourList[histIndex],label=keylist[histIndex],alpha=0.3)
         mu,sigma = norm.fit(rmsErrorList[histIndex])
         x_pdf = np.linspace(0,np.max(rmsErrorList[histIndex]), 100)
         y_pdf=norm.pdf(x_pdf, mu, sigma)
         ax2.plot(x_pdf,y_pdf,color=colourList[histIndex],linestyle='dashed')
-    ax1.legend(loc="upper right")
+    ax1.legend(loc="upper right",fontsize=20)
 
-    fig.savefig("/home/ryan/"+xlabel+".png",format='png',dpi=200)
+    fig.savefig("/home/ryan/"+xlabel+".png",format='png',bbox_inches='tight')
     return fig,ax1,ax2
 #     fig, ax1 = plt.subplots()
 # y, x, _ =ax1.hist(rmsError,bins)

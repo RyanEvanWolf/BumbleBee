@@ -16,6 +16,8 @@ from bumblebee.utils import *
 from bumblebee.motion import *
 from bumblebee.camera import *
 
+from bumblebee.srv import saveGraph,saveGraphRequest,saveGraphResponse
+
 from visualization_msgs.msg import Marker,MarkerArray
 import json
 import msgpack
@@ -78,13 +80,16 @@ def randomPartition(ids,minParameters=7):
 
 
 class basicGraph(nx.DiGraph):
-    def __init__(self):
+    def __init__(self,newCamera=True):
         super(basicGraph,self).__init__()
-        self.kSettings=getCameraSettingsFromServer(cameraType="subROI")
-        roi=ROIfrmMsg(self.kSettings["lInfo"].roi)
-        self.roiX,self.roiY,self.roiW,self.roiH=roi[0],roi[1],roi[2],roi[3]        
+        if(newCamera):
+            self.kSettings=getCameraSettingsFromServer(cameraType="subROI")
+            roi=ROIfrmMsg(self.kSettings["lInfo"].roi)
+            self.roiX,self.roiY,self.roiW,self.roiH=roi[0],roi[1],roi[2],roi[3]        
         self.nLandmarks=0
         self.nPoses=0
+        self.descriptorLength=16
+
     def newPoseVertex(self,ID=None):
         if(ID is None):
             pId="p_"+str(self.nPoses).zfill(7)
@@ -152,16 +157,16 @@ class basicGraph(nx.DiGraph):
         print("RANSAC @",targetFrame)
         trackIDS=self.getLandmarkTracksAT(sourceFrame,targetFrame)
 
-
-        maxIterations=100
+        startTime=time.time()
+        maxIterations=400
         goodModel=0.8*self.nLandmarks
         bestFit=[[0,0,0,1],[0,0,0]]
         besterr=np.inf 
         bestInliers=[]
         motionRMS=[]
-        minRMSerror=0.1
+        minRMSerror=0.3
 
-        inlierThreshold=1.0
+        inlierThreshold=1
 
         count=0
         minimumInliers=int(0.2*len(trackIDS))
@@ -251,6 +256,7 @@ class basicGraph(nx.DiGraph):
                 print("motion Fail",e)
 
             count+=1
+        startTime=time.time()-startTime
         print("----RESULT",besterr,len(bestInliers))
         msg.pose.orientation.x=bestFit[0][0]
         msg.pose.orientation.y=bestFit[0][1]
@@ -267,6 +273,7 @@ class basicGraph(nx.DiGraph):
         self.nodes[targetFrame]["msg"].transform.translation.z=msg.pose.position.z
         self.nodes[targetFrame]["inlierRMS"]=motionRMS
         self.nodes[targetFrame]["inliers"]=[trackIDS[x] for x in bestInliers]#trackIDS[bestInliers]
+        self.nodes[targetFrame]["time"]=startTime
         return msg
     #####################
     ###query algorithsm
@@ -303,6 +310,15 @@ class basicGraph(nx.DiGraph):
             X[:,p]=self.edges[(setPoses[p],landmarkID)]["X"].reshape(4)
             M[:,p]=self.edges[(setPoses[p],landmarkID)]["M"][0:3,0].reshape(3)
         return X,M
+    def getDescriptors(self,poseID):
+        activeLandmarks=self.getLandmarksVisibleAT(poseID)
+        lDesc=np.zeros((len(activeLandmarks),self.descriptorLength),np.uint8)
+        rDesc=np.zeros((len(activeLandmarks),self.descriptorLength),np.uint8)
+        for i in range(0,len(activeLandmarks)):
+            lDesc[i,:]=copy.deepcopy(self.edges[poseID,activeLandmarks[i]]["Dl"])#.reshape(self.descriptorLength))
+            rDesc[i,:]=copy.deepcopy(self.edges[poseID,activeLandmarks[i]]["Dr"])#.reshape(self.descriptorLength))
+        return lDesc,rDesc
+
     #############################
     ###internal graphing algorithms
     ########################
@@ -330,26 +346,68 @@ class basicGraph(nx.DiGraph):
             pitch.append(degrees(R[1]))
             yaw.append(degrees(R[2]))  
         return roll,pitch,yaw,Cx,Cy,Cz
+    def getTotalTracks(self):
+        inliers=[]
+        poseNames=self.getPoseVertices()
+        for p in range(1,len(poseNames)):
+            inliers.append(len(self.getLandmarkTracksAT(poseNames[p],
+                                                    poseNames[p-1])))
+        return inliers
+    def getInlierMotion(self):
+        inliers=[]
+        for p in self.getPoseVertices()[1:]:
+            msg=self.node[p]
+            inliers.append(len(msg["inliers"]))
+        return inliers       
+    def getInlierRatio(self):
+        inliers=[]
+        poseNames=self.getPoseVertices()
 
-
-
-
+        for p in range(1,len(poseNames)):
+            print(poseNames[p],poseNames[p-1],p/len(poseNames))
+            msg=self.node[poseNames[p]]
+            trackIds=self.getLandmarkTracksAT(poseNames[p],
+                                                    poseNames[p-1])                                
+            try:
+                inliers.append(len(msg["inliers"])/float(len(trackIds)))
+            except:
+                inliers.append(len(msg["inliers"]))
+        return inliers        
+    def getInlierRMS(self):
+        RMS=[]
+        for p in self.getPoseVertices()[1:]:
+            msg=self.node[p]
+            RMS.append(np.mean(msg["inlierRMS"])   )     
+        return RMS
+    def getMotionTime(self):
+        mTime=[]
+        for p in self.getPoseVertices()[1:]:
+            msg=self.node[p]
+            mTime.append(np.mean(msg["time"])   )     
+        return mTime       
 class slidingGraph(object):
-    def __init__(self,displayName="graph"):
+    def __init__(self,displayName="graph",newCam=True):
         self.displayName=displayName        
         self.debugTF =TransformBroadcaster()
         self.listener =TransformListener()         
+        self.cvb=CvBridge()
+        self.G=basicGraph(newCam)
+        self.nWindow=2
 
-        self.G=basicGraph()
+
+
         self.debugDeltaPose=rospy.Publisher(displayName+"/debug/deltaPose",PoseStamped,queue_size=1)
         self.debugDeltaStereo=rospy.Publisher(displayName+"/debug/deltaStereo",PointCloud,queue_size=1)
         self.debugMap=rospy.Publisher(displayName+"/debug/Map",MarkerArray,queue_size=2)
-        self.debugStereo=rospy.Publisher(displayName+"/debug/stereo",PointCloud,queue_size=2)
         self.debugCurrent=rospy.Publisher(displayName+"/debug/currentPose",PoseStamped,queue_size=2)
         self.debugMatches=rospy.Publisher(displayName+"/debug/Tracks",Image,queue_size=4)
 
         self.debugInliers=rospy.Publisher(displayName+"/debug/nInliers",Float32,queue_size=4)
         self.debugRatio=rospy.Publisher(displayName+"/debug/ratio",Float32,queue_size=4)
+
+        self.outSrv=rospy.Service(displayName+"/control/save",saveGraph,self.saveGraph)
+    ###################
+    ###MatPlotLib info
     def graphDeltaMotion(self):
         Rtheta=[]
         Cz=[]
@@ -383,41 +441,6 @@ class slidingGraph(object):
         ax2.plot(pitch,label="pitch")
         ax2.plot(yaw,label="yaw")
         ax2.legend()
-    def publishPoses(self):
-        p=self.G.getPoseVertices()
-        for pose in p:
-            m=copy.deepcopy(self.G.nodes[pose]["msg"])
-            m.header.stamp=rospy.Time()
-            if(m.header.frame_id != "world"):
-                m.header.frame_id=self.displayName+'/'+m.header.frame_id
-            print(m.header.frame_id)
-            m.child_frame_id=self.displayName+'/'+ m.child_frame_id
-            self.debugTF.sendTransformMessage(m)
-    def publishGlobalPoints(self,colour=ColorRGBA(0,0,1,0.5)):
-        l=self.G.getLandmarkVertices()
-
-        m=MarkerArray()
-        for k in l:
-            basePose=self.G.getLandmarkConnections(k)[0]
-            newMarker=Marker()
-            newMarker.header.frame_id=self.displayName+"/"+basePose
-            newMarker.id=self.G.node[k]["c"]
-            newMarker.type=2
-            newMarker.action=0
-
-            newMarker.pose.position.x=self.G.edges[basePose,k]["X"][0,0]
-            newMarker.pose.position.y=self.G.edges[basePose,k]["X"][1,0]
-            newMarker.pose.position.z=self.G.edges[basePose,k]["X"][2,0]
-
-
-            newMarker.pose.orientation.w=1
-            newMarker.scale.x=0.1
-            newMarker.scale.y=0.1
-            newMarker.scale.z=0.1
-            newMarker.color=colour
-            m.markers.append(newMarker)
-
-        self.debugMap.publish(m)   
     def getCumulativeError(self,compareName):
 
         roll=[]
@@ -442,6 +465,100 @@ class slidingGraph(object):
             Ty.append(abs(trans[1]-transIdeal[1]))
             Tz.append(abs(trans[2]-transIdeal[2]))
         return roll,pitch,yaw,Tx,Ty,Tz
+    ###################3
+    ##ROS publishing functionsnlier[j]/float(tracks[j]))
+    def publishPoses(self):
+        p=self.G.getPoseVertices()
+        for pose in p:
+            m=copy.deepcopy(self.G.nodes[pose]["msg"])
+            m.header.stamp=rospy.Time()
+            if(m.header.frame_id != "world"):
+                m.header.frame_id=self.displayName+'/'+m.header.frame_id
+            m.child_frame_id=self.displayName+'/'+ m.child_frame_id
+            m.header.stamp=rospy.Time()
+            self.debugTF.sendTransformMessage(m)
+    def publishGlobalPoints(self,colour=ColorRGBA(0,0,1,0.5)):
+        l=self.G.getLandmarkVertices()
+        totalDisp=int(0.8*len(l))   
+        displayIndexes=range(len(l))
+        np.random.shuffle(displayIndexes)
+        displayIndexes=displayIndexes[:totalDisp]
+        
+       # len(l)))#[:totalDisp]
+        #print(len(inLand))
+        m=MarkerArray()
+        errors=0
+        for k in displayIndexes:
+            try:
+                basePose=self.G.getLandmarkConnections(l[k])[0]
+                newMarker=Marker()
+                newMarker.header.frame_id=self.displayName+"/"+basePose
+                newMarker.id=self.G.node[l[k]]["c"]
+                newMarker.type=2
+                newMarker.action=0
+
+                newMarker.pose.position.x=self.G.edges[basePose,l[k]]["X"][0,0]
+                newMarker.pose.position.y=self.G.edges[basePose,l[k]]["X"][1,0]
+                newMarker.pose.position.z=self.G.edges[basePose,l[k]]["X"][2,0]
+
+
+                newMarker.pose.orientation.w=1
+                newMarker.scale.x=0.025
+                newMarker.scale.y=0.025
+                newMarker.scale.z=0.025
+                newMarker.color=colour
+                m.markers.append(newMarker)
+            except Exception as e:
+                errors+=1
+        print("errors",errors)
+
+        self.debugMap.publish(m)   
+    def publishLocalPoints(self,PoseID,delta=True):
+        activeLandmarks=self.G.getLandmarksVisibleAT(PoseID)
+        msg=PointCloud()
+        if(delta):
+            msg.header.frame_id="world"
+        else:
+            msg.header.frame_id=self.displayName+"/"+PoseID
+        msg.header.stamp=rospy.Time()
+        c=ChannelFloat32()
+        c.name="rgb"
+        c.values.append(255)
+        c.values.append(0)
+        c.values.append(0)
+        for landmark in activeLandmarks:
+            inPoint=Point32()
+            inPoint.x=self.G.edges[PoseID,landmark]["X"][0,0]
+            inPoint.y=self.G.edges[PoseID,landmark]["X"][1,0]
+            inPoint.z=self.G.edges[PoseID,landmark]["X"][2,0]
+            msg.points.append(inPoint)
+            msg.channels.append(c)
+        self.debugDeltaStereo.publish(msg)
+    def publishInlierOutlierTracks(self,sourceFrame,targetFrame,img=None):
+            if(img is None):
+                img=np.zeros((768,1024,3))
+            trackids=self.G.getLandmarkTracksAT(sourceFrame,targetFrame)
+            for a in trackids:
+                self.G.plotLandmark(img,a,[sourceFrame,targetFrame],(0,0,255))
+            inlierIds=self.G.nodes[targetFrame]["inliers"]
+            print(len(inlierIds),len(trackids))
+            for a in inlierIds:
+                self.G.plotLandmark(img,a,[sourceFrame,targetFrame],(255,255,0))
+            self.debugMatches.publish(self.cvb.cv2_to_imgmsg(img))
+
+            nInlier=Float32()
+            nInlier.data=len(inlierIds)
+            ratio=Float32()
+
+            ratio.data=len(inlierIds)/float(len(trackids))
+            self.debugInliers.publish(nInlier)
+            self.debugRatio.publish(ratio)#=rospy.Publisher(displayName+"/debug/ratio",Float32,queue_size=4)
+    def saveGraph(self,req):
+        outFile=req.outputFileName
+        with open(outFile,'wb') as f:
+            pickle.dump(self.G,f)
+        print("Graph save To " +outFile)
+        return saveGraphResponse()
 # class slidingGraph(nx.DiGraph):
 #     def __init__(self,displayName="graph",frames=2,graph=None):
         
@@ -450,7 +567,7 @@ class slidingGraph(object):
 #         else:
 #             super(slidingGraph,self).__init__(graph.copy())
 #         self.displayName=displayName
-#         self.nWindow=frames
+#         
 #         self.kSettings=getCameraSettingsFromServer(cameraType="subROI")
 #         roi=ROIfrmMsg(self.kSettings["lInfo"].roi)
 #         self.roiX,self.roiY,self.roiW,self.roiH=roi[0],roi[1],roi[2],roi[3]        

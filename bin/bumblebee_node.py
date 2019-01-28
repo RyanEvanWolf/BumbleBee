@@ -67,23 +67,23 @@ class bumblebeeCamera():
         rightPub.append(rospy.Publisher(rospy.get_name()+"/right/ROI",Image,queue_size=8))
         self.Publishers.append(rightPub)
         #####Create Subscriptions to Topics
-        self.Subscribers.append(rospy.Subscriber("/bumblebee_configuration/idealLeft/CameraInfo",CameraInfo,self.subInfo,(0)))
-        self.Subscribers.append(rospy.Subscriber("/bumblebee_configuration/idealRight/CameraInfo", CameraInfo, self.subInfo, (1)))
-        self.Subscribers.append(rospy.Subscriber("/bumblebee_configuration/idealLeft/intX",Image, self.subMapping, (0,0)))
+        self.Subscribers.append(rospy.Subscriber("/bumblebee_configuration/Left/subROI/CameraInfo",CameraInfo,self.subInfo,(0)))
+        self.Subscribers.append(rospy.Subscriber("/bumblebee_configuration/Right/subROI/CameraInfo", CameraInfo, self.subInfo, (1)))
+        self.Subscribers.append(rospy.Subscriber("/bumblebee_configuration/Left/intX",Image, self.subMapping, (0,0)))
         self.Subscribers.append(
-            rospy.Subscriber("/bumblebee_configuration/idealLeft/intY", Image, self.subMapping, (0, 1)))
+            rospy.Subscriber("/bumblebee_configuration/Left/intY", Image, self.subMapping, (0, 1)))
         self.Subscribers.append(
-            rospy.Subscriber("/bumblebee_configuration/idealLeft/floatX", Image, self.subMapping, (1, 0)))
+            rospy.Subscriber("/bumblebee_configuration/Left/floatX", Image, self.subMapping, (1, 0)))
         self.Subscribers.append(
-            rospy.Subscriber("/bumblebee_configuration/idealLeft/floatY", Image, self.subMapping, (1, 1)))
+            rospy.Subscriber("/bumblebee_configuration/Left/floatY", Image, self.subMapping, (1, 1)))
 
-        self.Subscribers.append(rospy.Subscriber("/bumblebee_configuration/idealRight/intX",Image, self.subMapping, (2,0)))
+        self.Subscribers.append(rospy.Subscriber("/bumblebee_configuration/Right/intX",Image, self.subMapping, (2,0)))
         self.Subscribers.append(
-            rospy.Subscriber("/bumblebee_configuration/idealRight/intY", Image, self.subMapping, (2, 1)))
+            rospy.Subscriber("/bumblebee_configuration/Right/intY", Image, self.subMapping, (2, 1)))
         self.Subscribers.append(
-            rospy.Subscriber("/bumblebee_configuration/idealRight/floatX", Image, self.subMapping, (3, 0)))
+            rospy.Subscriber("/bumblebee_configuration/Right/floatX", Image, self.subMapping, (3, 0)))
         self.Subscribers.append(
-            rospy.Subscriber("/bumblebee_configuration/idealRight/floatY", Image, self.subMapping, (3, 1)))
+            rospy.Subscriber("/bumblebee_configuration/Right/floatY", Image, self.subMapping, (3, 1)))
 
         self.Subscribers.append(
             rospy.Subscriber("/bumblebee_configuration/Q", Image, self.subQ))
@@ -162,6 +162,8 @@ rospy.init_node('bumblebee')
 time.sleep(2)
 
 test=bumblebeeCamera(sys.argv[1])
+print("RAN")
+
 
 #
 # worldFrame="world"

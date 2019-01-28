@@ -11,11 +11,6 @@ import copy
 from bumblebee.utils import *
 from bumblebee.drawing import *
 
-
-
-
-
-
 def getProjections(cameraSet,Xset):
     '''
     cameraSet  = [P0 P1  P2  P3]
@@ -329,42 +324,12 @@ class stereoCamera:
             self.kSettings=getCameraSettingsFromServer(cameraType=cameraType)
         else:
             self.kSettings=getCameraSettingsFromServer(configurationTopic,cameraType)
-    # def simulateFrame(self,simSettings,nPoints=10):
-    #     outFrame=simulationFrame()
-    #     outFrame.H=np.eye(4)
-    #     for pointID in range(0,nPoints):
-    #         outFrame.landmarks.append(genRandomSimulationPoint(self.kSettings,simSettings))
-    #     return outFrame
+
     def checkWithinROI(self,pt,left=True):
         if(left):
             return checkWithinROI(pt,ROIfrmMsg(self.kSettings["lInfo"].roi))
         else:
             return checkWithinROI(pt,ROIfrmMsg(self.kSettings["rInfo"].roi))
-    # def simulateMotionFrame(self,simSettings,H,nPoints=10):
-    #     #####Gen normal landmark
-    #     outFrame=simulationFrame()
-    #     for pointIndex in range(0,nPoints):
-    #         validSimulation=False
-    #         while(not validSimulation):
-    #             landmarkA=genRandomSimulationPoint(self.kSettings,simSettings)
-    #             validTransform,l,r=validateLandmark(landmarkA["Ideal"]["X"],
-    #                                 self.kSettings["Pl"],
-    #                                 self.kSettings["Pr"],
-    #                                 self.kSettings["roi"],
-    #                                 simSettings["HeightMaximum"],H)
-    #             if(validTransform):
-    #                 reproject1=self.reproject(l,r)
-    #                 rp2=self.reproject2(l,r)
-    #                 x1=rmsError(np.linalg.inv(H).dot(reproject1),landmarkA["Ideal"]["X"])
-    #                 x2=rmsError(np.linalg.inv(H).dot(rp2),landmarkA["Ideal"]["X"])
-    #                 print(np.transpose(x1),np.transpose(x2))
-    #                 print(np.transpose(np.linalg.inv(H).dot(reproject1)),
-    #                       np.transpose(np.linalg.inv(H).dot(rp2)),
-    #                         np.transpose(landmarkA["Ideal"]["X"]))
-    #                 print("---")
-    #                 validSimulation=True
-    #                 outFrame.landmarks.append(landmarkA)
-    #     return outFrame
     def predictPoint(self,Xworld):
         leftPixel=self.kSettings["Pl"].dot(Xworld)
         leftPixel/=leftPixel[2,0]
